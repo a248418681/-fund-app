@@ -1,133 +1,91 @@
-# 基金宝 - Fund App
+# 🏦 FundRadar — 基金实时估值与持仓分析工具
 
-> 基金管理应用 - Flutter 重构版
+[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
+[![Architecture](https://img.shields.io/badge/Architecture-Clean%20Architecture-brightgreen)]()
+[![State Management](https://img.shields.io/badge/State-BLoC-00B4D8)]()
 
-一款功能完整的基金管理 App，支持持仓追踪、实时估值、板块行情、资讯快讯、OCR 导入等核心功能。
+基于 Flutter 构建的跨平台基金实时估值工具，支持**盘中净值估算、持仓穿透分析、历史走势回溯**和**智能组合监控**。
 
-## ✨ 功能特性
+## ✨ 核心功能
 
-### 📊 持仓管理
-- 持仓列表：实时估值 + 净值涨跌双维度展示
-- 智能标签：交易时段自动切换「今日估算 / 昨日净值」
-- 静默刷新：60 秒自动刷新，数据无变化不闪烁
-- 收益汇总：当日收益、持仓成本一目了然
-
-### 📈 行情中心
-- 大盘指数：沪深300、上证50、创业板指、中证500 实时行情
-- 板块排行：行业板块涨跌幅排名，成分股详情
-- 基金排行：按类型筛选，支持多维度排序
-- 关联基金：板块详情页展示相关基金及涨跌
-
-### 🔍 基金搜索
-- 模糊搜索：代码 / 名称 / 拼音快速查找
-- 热门推荐：默认展示热门基金
-
-### 📰 资讯快讯
-- 东方财富实时财经新闻
-- 按时间倒序展示
-
-### 📸 OCR 导入
-- 支付宝持仓截图一键识别（PaddleOCR）
-- 自动解析基金代码、名称、持仓份额
-
-### 📋 基金详情
-- 净值走势图（1月/3月/6月/1年）
-- 阶段涨幅（近1月/3月/6月/1年）
-- 重仓持股 & 基金经理信息
-- 交易记录（买入/卖出/分红）
+| 功能 | 描述 |
+|------|------|
+| 📊 **实时净值估算** | 基于基金持仓穿透与底层资产行情，实时估算基金盘中净值 |
+| 📦 **持仓穿透分析** | 穿透基金重仓股/债券持仓，追踪标的实时涨跌 |
+| 📈 **净值历史回测** | 多维度历史净值走势可视化，支持对比分析 |
+| 🔔 **异动监控** | 持仓标的实时异动提醒，关键点位自动提示 |
+| 📰 **基金资讯** | 聚合基金公告、研报、市场快讯 |
+| 🌗 **深色模式** | 全组件深色/浅色自适应，交易时段低光友好 |
 
 ## 🏗️ 技术架构
 
 `
 lib/
-├── core/           # 主题、路由、依赖注入、异常定义
+├── core/           # 基础设施层
+│   ├── constants/    # 全局常量
+│   ├── di/          # 依赖注入 (Dependency Injection)
+│   ├── exceptions/  # 异常体系
+│   ├── router/      # 路由管理
+│   └── theme/       # 主题系统
 ├── data/           # 数据层
-│   ├── datasources/  # 远程 API + 本地存储
-│   └── repositories/ # Repository 实现
-├── domain/         # 领域层
-│   ├── entities/     # 数据实体
-│   ├── repositories/ # Repository 抽象
-│   └── usecases/     # 用例
-├── presentation/   # 表现层
-│   ├── bloc/         # BLoC 状态管理（16个）
-│   └── pages/        # 页面（17个）
-└── utils/          # 工具类
+│   ├── datasources/
+│   │   ├── remote/    # 远程API数据源 (Dio HTTP Client)
+│   │   └── local/     # 本地持久化
+│   ├── models/       # 数据模型 (estimate/fund/holding/nav/news/portfolio)
+│   └── repositories/ # 仓储实现
+├── domain/         # 领域层（纯Dart, 零依赖）
+│   ├── entities/     # 核心实体 (fund_entity — 16.8KB)
+│   ├── repositories/ # 仓储接口
+│   └── usecases/fund/ # 基金业务用例
+├── presentation/   # 展示层
+│   ├── bloc/         # BLoC 状态管理
+│   ├── pages/        # 页面组件
+│   └── widgets/      # 通用组件
+└── utils/          # 工具函数
 `
 
-### 核心技术栈
-
-| 类别 | 技术 |
-|------|------|
-| 框架 | Flutter 3.41.6 |
-| 状态管理 | flutter_bloc ^8.1.3 |
-| 网络请求 | dio ^5.4.0 |
-| 路由 | go_router ^13.0.1 |
-| 依赖注入 | get_it ^7.6.4 |
-| OCR | paddle_ocr_flutter ^0.0.3 |
-| 编码 | gbk_codec ^0.4.0 |
-
-### 数据源
-
-| API | 用途 | 编码 |
-|-----|------|------|
-| fundgz.1234567.com.cn | 实时估值（GZ） | GBK |
-| fund.eastmoney.com/pingzhongdata | 基金详情（PZ） | UTF-8 |
-| push2.eastmoney.com | 板块行情/成分股 | GBK |
-| qt.gtimg.cn | 腾讯行情（大盘指数） | GBK |
-| fundsuggest.eastmoney.com | 基金搜索 | UTF-8 |
-| danjuanfunds.com | 蛋卷降级数据源 | UTF-8 |
-
-### 三级降级策略
-
-基金详情数据获取采用降级方案，确保数据可用性：
-
-1. **Level 1**：GZ（估值）+ PZ（详情）并行 → 最完整
-2. **Level 2**：GZ 失败（如 QDII 404）→ 仅 PZ → 有净值无估值
-3. **Level 3**：PZ 也失败 → 蛋卷 API → 基础数据
+**设计模式**：Clean Architecture (核心/数据/领域/展示四层分离)
+**状态管理**：BLoC (Business Logic Component)
+**依赖注入**：自定义DI容器
+**HTTP Client**：Dio + 自定义拦截器链
 
 ## 🚀 快速开始
 
-### 环境要求
-
-- Flutter SDK >= 3.41.6
-- Dart >= 3.0
-- Android Studio / VS Code
-- 模拟器或真机（Android）
-
-### 安装运行
-
 `ash
-# 克隆仓库
-git clone https://github.com/a248418681/-fund-app.git
-cd -fund-app
-
 # 安装依赖
 flutter pub get
 
-# 运行
+# 运行 (Debug)
 flutter run
-`
 
-### 构建 APK
-
-`ash
+# 构建 APK
 flutter build apk --release
 `
 
-## 📁 页面一览
+## 📋 数据能力
 
-| 页面 | 路径 | 说明 |
-|------|------|------|
-| 持仓 | /holdings | 持仓列表 + 收益汇总 |
-| 自选 | / | 自选基金 + 大盘指数 |
-| 行情 | /market | 板块排行 + 基金排行 |
-| 资讯 | /news | 财经新闻 |
-| 搜索 | /search | 基金搜索 |
-| 详情 | /detail/:code | 净值走势 + 重仓股 |
-| 交易记录 | /trade | 买入/卖出/分红 |
-| 板块详情 | /sector/:code | 成分股 + 关联基金 |
-| 设置 | /settings | 应用设置 |
+- **实时估值**：基于基金持仓数据 + 底层标的实时行情，算法测算盘中净值
+- **持仓穿透**：支持股票型/混合型/指数型基金的仓位穿透查询
+- **历史回溯**：多时间维度净值曲线与回撤分析
+- **多数据源聚合**：远程API + 本地缓存分层架构，确保弱网下核心数据可用
 
-## 📝 License
+## 🛠️ 技术栈
 
-MIT
+| 层 | 技术 |
+|---|------|
+| 框架 | Flutter 3.x |
+| 语言 | Dart |
+| 架构 | Clean Architecture (Core/Data/Domain/Presentation) |
+| 状态管理 | BLoC |
+| HTTP | Dio |
+| 路由 | GoRouter |
+
+## 📱 平台支持
+
+- ✅ Android
+- 🚧 iOS (架构已预留)
+- 🚧 Web (架构已预留)
+
+---
+
+*本项目为个人投资决策辅助工具，数据仅供参考，不构成投资建议。*
