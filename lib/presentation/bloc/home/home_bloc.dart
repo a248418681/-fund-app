@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../domain/entities/fund_entity.dart';
 import '../../../domain/repositories/fund_repository.dart';
+import '../../../utils/error_util.dart';
 import 'home_event.dart';
 import 'home_state.dart';
 
@@ -19,17 +20,17 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   Future<void> _onInit(HomeInit event, Emitter<HomeState> emit) async {
     emit(state.copyWith(status: HomeStatus.loading));
     try {
-      final indices = await _repository.fetchMarketIndices();
-      final watchlistInfo = await _repository.getWatchlist();
-      final watchlist = await _buildWatchlistItems(watchlistInfo);
+      // 并行：指数 + 自选列表 + 资讯（资讯失败了给空）
+      final results = await Future.wait([
+        _repository.fetchMarketIndices(),
+        _repository.getWatchlist(),
+        _repository.fetchFinanceNews(pageSize: 6).then((v) => v, onError: (_) => <NewsItem>[]),
+      ]);
+      final indices = results[0] as List<MarketIndex>;
+      final watchlistInfo = results[1] as List<FundInfo>;
+      final news = results[2] as List<NewsItem>;
 
-      // 新闻为非关键数据，单独 try-catch 防止拖垮首页
-      List<NewsItem> news = [];
-      try {
-        news = await _repository.fetchFinanceNews(pageSize: 6);
-      } catch (e) {
-        debugPrint('[HomeBloc] fetchFinanceNews non-critical error: $e');
-      }
+      final watchlist = await _buildWatchlistItems(watchlistInfo);
 
       emit(state.copyWith(
         status: HomeStatus.loaded,
@@ -39,24 +40,24 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         lastRefreshTime: _formatTime(DateTime.now()),
       ));
     } catch (e) {
-      emit(state.copyWith(status: HomeStatus.error, errorMessage: e.toString()));
+      emit(state.copyWith(status: HomeStatus.error, errorMessage: ErrorUtil.format(e)));
     }
   }
 
   Future<void> _onRefresh(HomeRefresh event, Emitter<HomeState> emit) async {
     emit(state.copyWith(isRefreshing: true));
     try {
-      final indices = await _repository.fetchMarketIndices();
-      final watchlistInfo = await _repository.getWatchlist();
-      final watchlist = await _buildWatchlistItems(watchlistInfo);
+      // 并行：指数 + 自选列表 + 资讯
+      final results = await Future.wait([
+        _repository.fetchMarketIndices(),
+        _repository.getWatchlist(),
+        _repository.fetchFinanceNews(pageSize: 6).then((v) => v, onError: (_) => state.news),
+      ]);
+      final indices = results[0] as List<MarketIndex>;
+      final watchlistInfo = results[1] as List<FundInfo>;
+      final news = results[2] as List<NewsItem>;
 
-      // 新闻为非关键数据，单独 try-catch
-      List<NewsItem> news = state.news;
-      try {
-        news = await _repository.fetchFinanceNews(pageSize: 6);
-      } catch (e) {
-        debugPrint('[HomeBloc] fetchFinanceNews non-critical error: $e');
-      }
+      final watchlist = await _buildWatchlistItems(watchlistInfo);
 
       emit(state.copyWith(
         indices: indices,
@@ -67,7 +68,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       ));
     } catch (e) {
       debugPrint('[HomeBloc] _onRefresh error: $e');
-      emit(state.copyWith(isRefreshing: false));
+      emit(state.copyWith(isRefreshing: false, errorMessage: ErrorUtil.format(e)));
     }
   }
 
@@ -118,13 +119,15 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       final est = estimates[code];
       final name = nameMap[code] ?? code;
       if (est != null) {
+        final safeValue = (est.gsz > 0) ? _safeToFixed(est.gsz, 4) : _safeToFixed(est.dwjz, 4);
+        final safeLast = (est.dwjz > 0) ? _safeToFixed(est.dwjz, 4) : null;
         return WatchlistItem(
           code: code,
           name: name,
-          estimateValue: est.gsz > 0 ? est.gsz.toStringAsFixed(4) : est.dwjz.toStringAsFixed(4),
-          estimateChange: est.gszzl.toStringAsFixed(2),
+          estimateValue: safeValue,
+          estimateChange: _safeToFixed(est.gszzl, 2),
           estimateTime: est.gztime,
-          lastValue: est.dwjz > 0 ? est.dwjz.toStringAsFixed(4) : null,
+          lastValue: safeLast,
           loading: false,
           dataSource: 'estimate',
         );
@@ -136,6 +139,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         dataSource: 'estimate',
       );
     }).toList();
+  }
+
+  /// 安全格式化 double，防止 Infinity/NaN 导致 toStringAsFixed 抛异常
+  String _safeToFixed(double value, int fractionDigits) {
+    if (!value.isFinite) return '0.${'0' * fractionDigits}';
+    return value.toStringAsFixed(fractionDigits);
   }
 
   String _formatTime(DateTime dt) {

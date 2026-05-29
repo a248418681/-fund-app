@@ -760,14 +760,6 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.2.0"
-  paddle_ocr_flutter:
-    dependency: "direct main"
-    description:
-      name: paddle_ocr_flutter
-      sha256: dc90e1d6c030de5ba87f58c8314f0fdb440e4e4a9f8612b5e728e268e9ad5bea
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "0.0.3"
   path:
     dependency: "direct main"
     description:

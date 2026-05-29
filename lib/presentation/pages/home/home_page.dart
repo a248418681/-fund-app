@@ -58,7 +58,7 @@ class _HomePageState extends State<HomePage> {
     return SliverToBoxAdapter(
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -99,11 +99,11 @@ class _HomePageState extends State<HomePage> {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: AppTheme.borderColor, width: 0.5),
         ),
-        child: Row(
+        child: const Row(
           children: [
             Icon(Icons.volume_up, size: 14, color: AppTheme.textSecondary),
-            const SizedBox(width: 8),
-            const Expanded(
+            SizedBox(width: 8),
+            Expanded(
               child: Text(
                 '基金投资有风险，入市需谨慎 | 交易时间：工作日 9:30-15:00',
                 style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),

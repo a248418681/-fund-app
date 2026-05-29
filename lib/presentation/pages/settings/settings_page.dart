@@ -75,7 +75,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 )),
                 selected: {_themeIndex},
                 onSelectionChanged: (v) => _setTheme(v.first),
-                style: ButtonStyle(
+                style: const ButtonStyle(
                   visualDensity: VisualDensity.compact,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),

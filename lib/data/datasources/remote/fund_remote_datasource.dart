@@ -1,5 +1,4 @@
-﻿import 'dart:convert';
-import 'dart:typed_data';
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:gbk_codec/gbk_codec.dart';
@@ -199,8 +198,11 @@ class FundRemoteDataSource {
               while (j >= start && jsText[j] == '\\') { bsCount++; j--; }
               if (bsCount % 2 == 0) inStr = !inStr;
             } else if (!inStr) {
-              if (c == '[' || c == '{') depth++;
-              else if (c == ']' || c == '}') depth--;
+              if (c == '[' || c == '{') {
+                depth++;
+              } else if (c == ']' || c == '}') {
+                depth--;
+              }
             }
             i++;
           }
@@ -240,7 +242,7 @@ class FundRemoteDataSource {
               names.length.clamp(0, ids.length),
               (i) => {'name': names[i], 'id': ids.length > i ? ids[i] : ''},
             );
-            debugPrint('[_PzData] managers extracted ${managersResult!.length} via simple fallback');
+            debugPrint('[_PzData] managers extracted ${managersResult.length} via simple fallback');
           }
         } catch (e) {
           debugPrint('[_PzData] managers simple fallback also failed: $e');
@@ -524,6 +526,10 @@ class FundRemoteDataSource {
     throw Exception('获取基金数据失败：所有数据源均不可用($code)');
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // 净值历史与阶段回报
+  // ═══════════════════════════════════════════════════════════════
+
   /// 获取净值历史（从 pingzhongdata）
   Future<List<NetValueRecord>> fetchNetValueHistory(String code, {int days = 90}) async {
     try {
@@ -576,6 +582,10 @@ class FundRemoteDataSource {
       return [];
     }
   }
+
+  // ═══════════════════════════════════════════════════════════════
+  // 持仓查询（东方财富 + 腾讯行情）
+  // ═══════════════════════════════════════════════════════════════
 
   /// 获取重仓股（东方财富，已弃用 - 降级用）
   Future<List<StockHolding>> fetchStockHoldings(String code) async {
@@ -742,7 +752,7 @@ class FundRemoteDataSource {
     try {
       String prefix = stockCode.startsWith('6') || stockCode.startsWith('68') ? 'sh' : 'sz';
       // qt.gtimg.cn 返回 GBK 编码
-      final response = await _dio.get('https://qt.gtimg.cn/q=${prefix}$stockCode',
+      final response = await _dio.get('https://qt.gtimg.cn/q=$prefix$stockCode',
         options: Options(responseType: ResponseType.bytes),
       );
       final bytes = response.data as Uint8List;
@@ -860,6 +870,16 @@ class FundRemoteDataSource {
     int pageSize = 20,
     String fundType = 'all', // all/gp(股票)/hh(混合)/zq(债券)/zs(指数)/qdii(QDII)
   }) async {
+    // 映射内部 sortType 到 rankhandler API 的 sc 参数
+    const sortMap = {
+      'r': 'rzdf',
+      'zzf': 'zzf',
+      '1yzf': '1yzf',
+      '3yzf': '3yzf',
+      '6yzf': '6yzf',
+      '1nzf': '1nzf',
+    };
+    final apiSort = sortMap[sortType] ?? sortType;
     try {
       // 天天基金排行 API
       final response = await _dio.get(
@@ -870,7 +890,7 @@ class FundRemoteDataSource {
           'ft': fundType,
           'rs': '',
           'gs': '0',
-          'sc': sortType,
+          'sc': apiSort,
           'st': order,
           'sd': _getRankStartDate(),
           'ed': _getTodayStr(),
@@ -925,7 +945,7 @@ class FundRemoteDataSource {
   }
 
   /// 搜索基金
-  Future<List<FundInfo>> searchFund(String keyword, {int limit = 50}) async {
+  Future<List<FundInfo>> searchFund(String keyword, {int limit = 50, CancelToken? cancelToken}) async {
     if (keyword.isEmpty) return [];
     
     try {
@@ -938,6 +958,7 @@ class FundRemoteDataSource {
           'pagesize': limit.toString(),
         },
         options: Options(responseType: ResponseType.bytes),
+        cancelToken: cancelToken,
       );
       
       final bytes = response.data as Uint8List;
@@ -972,6 +993,10 @@ class FundRemoteDataSource {
       rethrow;
     }
   }
+
+  // ═══════════════════════════════════════════════════════════════
+  // 基金搜索与列表
+  // ═══════════════════════════════════════════════════════════════
 
   /// 获取基金列表（热门）
   Future<List<FundInfo>> fetchFundList() async {
@@ -1042,25 +1067,54 @@ class FundRemoteDataSource {
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // 板块行情（排行 / 成分股 / 关联基金 / 板块诊断）
+  // ═══════════════════════════════════════════════════════════════
+
+  /// push2 系列域名回退请求（东方财富多 IP 屏蔽频繁，自动切换）
+  static const _push2Hosts = [
+    'push2his.eastmoney.com',
+    'push2delay.eastmoney.com',
+    'push2.eastmoney.com',
+  ];
+
+  Future<Response<dynamic>> _push2Get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    Object? lastError;
+    for (final host in _push2Hosts) {
+      try {
+        return await _dio.get(
+          'https://$host$path',
+          queryParameters: queryParameters,
+          options: Options(
+            responseType: ResponseType.bytes,
+            receiveTimeout: const Duration(seconds: 8),
+          ),
+        );
+      } catch (e) {
+        lastError = e;
+        debugPrint('[push2] $host failed, try next...');
+      }
+    }
+    throw lastError!;
+  }
+
   /// 获取热门板块排行（东方财富板块行情 API）
   Future<List<SectorRankItem>> fetchSectorRanking({int pageSize = 10}) async {
     try {
-      // push2 API 返回 GBK 编码（板块名称 f14 是中文 GBK）
-      final response = await _dio.get(
-        'https://push2.eastmoney.com/api/qt/clist/get',
-        queryParameters: {
-          'pn': '1',
-          'pz': pageSize.toString(),
-          'po': '1', // 降序
-          'np': '1',
-          'fltt': '2',
-          'invt': '2',
-          'fid': 'f3', // 按涨跌幅排序
-          'fs': 'm:90+t:2', // 行业板块
-          'fields': 'f2,f3,f4,f12,f14', // 价格,涨跌幅,涨跌额,代码,名称
-        },
-        options: Options(responseType: ResponseType.bytes),
-      );
+      final response = await _push2Get('/api/qt/clist/get', queryParameters: {
+        'pn': '1',
+        'pz': pageSize.toString(),
+        'po': '1',
+        'np': '1',
+        'fltt': '2',
+        'invt': '2',
+        'fid': 'f3',
+        'fs': 'm:90+t:2',
+        'fields': 'f2,f3,f4,f12,f14',
+      });
 
       final rawData2 = response.data;
       debugPrint('[API] fetchSectorRanking rawData type: ${rawData2.runtimeType}');
@@ -1068,8 +1122,8 @@ class FundRemoteDataSource {
         debugPrint('[API] fetchSectorRanking is String! first 100: ${rawData2.substring(0, rawData2.length > 100 ? 100 : rawData2.length)}');
       }
       final bytes = rawData2 is Uint8List ? rawData2 : Uint8List.fromList((rawData2 as String).codeUnits);
-      final text = gbk.decode(bytes);
-      debugPrint('[API] fetchSectorRanking gbk decoded first 200: ${text.substring(0, text.length > 200 ? 200 : text.length)}');
+      final text = utf8.decode(bytes);
+      debugPrint('[API] fetchSectorRanking decoded first 200: ${text.substring(0, text.length > 200 ? 200 : text.length)}');
       final data = jsonDecode(text) as Map<String, dynamic>;
       final diff = (data['data'] as Map<String, dynamic>?)?['diff'] as List? ?? [];
 
@@ -1092,22 +1146,17 @@ class FundRemoteDataSource {
   /// 获取板块成分股列表
   Future<List<SectorConstituentItem>> fetchSectorConstituents(String sectorCode, {int pageSize = 50}) async {
     try {
-      // push2 API 返回 GBK 编码（股票名称 f14 是中文 GBK）
-      final response = await _dio.get(
-        'https://push2.eastmoney.com/api/qt/clist/get',
-        queryParameters: {
-          'pn': '1',
-          'pz': pageSize.toString(),
-          'po': '1',
-          'np': '1',
-          'fltt': '2',
-          'invt': '2',
-          'fid': 'f3',
-          'fs': 'b:$sectorCode',
-          'fields': 'f2,f3,f4,f8,f12,f14,f20',
-        },
-        options: Options(responseType: ResponseType.bytes),
-      );
+      final response = await _push2Get('/api/qt/clist/get', queryParameters: {
+        'pn': '1',
+        'pz': pageSize.toString(),
+        'po': '1',
+        'np': '1',
+        'fltt': '2',
+        'invt': '2',
+        'fid': 'f3',
+        'fs': 'b:$sectorCode',
+        'fields': 'f2,f3,f4,f8,f12,f14,f20',
+      });
 
       final rawData = response.data;
       debugPrint('[API] fetchSectorConstituents rawData type: ${rawData.runtimeType}');
@@ -1117,8 +1166,8 @@ class FundRemoteDataSource {
         debugPrint('[API] fetchSectorConstituents is String! first 100 chars: ${rawData.substring(0, rawData.length > 100 ? 100 : rawData.length)}');
       }
       final bytes = rawData is Uint8List ? rawData : Uint8List.fromList((rawData as String).codeUnits);
-      final text = gbk.decode(bytes);
-      debugPrint('[API] fetchSectorConstituents gbk decoded first 200 chars: ${text.substring(0, text.length > 200 ? 200 : text.length)}');
+      final text = utf8.decode(bytes);
+      debugPrint('[API] fetchSectorConstituents decoded first 200 chars: ${text.substring(0, text.length > 200 ? 200 : text.length)}');
       final data = jsonDecode(text) as Map<String, dynamic>;
       final diff = (data['data'] as Map<String, dynamic>?)?['diff'] as List? ?? [];
 
@@ -1312,17 +1361,21 @@ class FundRemoteDataSource {
       final sectorName = identifySectorFromFundName(fundName, fundType, fundCode);
       debugPrint('[SectorInfo] identified sector: $sectorName for $fundName');
 
-      // 获取行业板块列表（push2 API 返回 GBK 编码）
-      final url = 'https://push2.eastmoney.com/api/qt/clist/get'
-          '?pn=1&pz=50&po=1&np=1&fltt=2&invt=2'
-          '&fid=f3&fs=m:90+t:2'
-          '&fields=f2,f3,f12,f14,f104,f105&_=${DateTime.now().millisecondsSinceEpoch}';
-
-      final resp = await _dio.get(url,
-        options: Options(responseType: ResponseType.bytes),
-      );
+      // 获取行业板块列表（push2 系列域名自动回退）
+      final resp = await _push2Get('/api/qt/clist/get', queryParameters: {
+        'pn': '1',
+        'pz': '50',
+        'po': '1',
+        'np': '1',
+        'fltt': '2',
+        'invt': '2',
+        'fid': 'f3',
+        'fs': 'm:90+t:2',
+        'fields': 'f2,f3,f12,f14,f104,f105',
+        '_': DateTime.now().millisecondsSinceEpoch.toString(),
+      });
       final respBytes = resp.data as Uint8List;
-      final respText = gbk.decode(respBytes);
+      final respText = utf8.decode(respBytes);
       final data = jsonDecode(respText) as Map<String, dynamic>?;
       final diff = data?['data']?['diff'] as List? ?? [];
 
@@ -1541,10 +1594,15 @@ class FundRemoteDataSource {
         if (map['data'] is List && (map['data'] as List).isNotEmpty) {
           final data = map['data'] as List;
           final latestValue = (data.last as num?)?.toDouble() ?? 0.0;
-          if (name.contains('股票')) stocks = latestValue;
-          else if (name.contains('债券')) bonds = latestValue;
-          else if (name.contains('现金')) cash = latestValue;
-          else if (name.contains('其他')) others = latestValue;
+          if (name.contains('股票')) {
+            stocks = latestValue;
+          } else if (name.contains('债券')) {
+            bonds = latestValue;
+          } else if (name.contains('现金')) {
+            cash = latestValue;
+          } else if (name.contains('其他')) {
+            others = latestValue;
+          }
         }
       }
       return AssetAllocation(stocks: stocks, bonds: bonds, cash: cash, others: others);

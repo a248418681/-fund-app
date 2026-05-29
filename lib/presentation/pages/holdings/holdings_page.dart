@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
@@ -628,13 +628,13 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
     return Container(
       color: const Color(0xFFFAFAFA),
       padding: const EdgeInsets.symmetric(horizontal: _padH, vertical: 8),
-      child: Row(
+      child: const Row(
         children: [
           SizedBox(
             width: _nameW,
-            child: const Text('基金名称', style: headerStyle),
+            child: Text('基金名称', style: headerStyle),
           ),
-          const Expanded(
+          Expanded(
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               physics: ClampingScrollPhysics(),

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import '../entities/fund_entity.dart';
 
 abstract class FundRepository {
@@ -11,7 +12,7 @@ abstract class FundRepository {
   Future<List<FundInfo>> fetchFundList();
 
   /// 搜索基金
-  Future<List<FundInfo>> searchFund(String keyword, {int limit = 50});
+  Future<List<FundInfo>> searchFund(String keyword, {int limit = 50, CancelToken? cancelToken});
 
   /// 获取历史净值
   Future<List<NetValueRecord>> fetchNetValueHistory(String code, {int days = 30});

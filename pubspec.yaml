@@ -46,7 +46,6 @@ dependencies:
   go_router: ^13.0.1
   gbk_codec: ^0.4.0
   image_picker: ^1.2.1
-  paddle_ocr_flutter: ^0.0.3
   google_mlkit_text_recognition: ^0.15.1
 
 dev_dependencies:

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -16,15 +16,14 @@ class MarketPage extends StatefulWidget {
 }
 
 class _MarketPageState extends State<MarketPage> {
-  // ── 基金类型映射 ──
-  static const _fundTypes = [
-    ('all', '全部'),
-    ('gp', '股票型'),
-    ('hh', '混合型'),
-    ('zq', '债券型'),
-    ('zs', '指数型'),
-    ('qdii', 'QDII'),
-  ];
+  // ── 标签（rankhandler 数据为昨日收盘，不使用"估算"）──
+  String get _dayChangeLabel {
+    final now = DateTime.now();
+    final weekday = now.weekday;
+    final isWeekend = weekday == 6 || weekday == 7;
+    if (isWeekend) return '上日涨跌';
+    return '昨日涨跌';
+  }
 
   @override
   void initState() {
@@ -32,7 +31,6 @@ class _MarketPageState extends State<MarketPage> {
     context.read<MarketBloc>().add(MarketLoad());
   }
 
-  // 打开外部链接（指数/板块详情）
   Future<void> _openUrl(String url) async {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
@@ -78,10 +76,10 @@ class _MarketPageState extends State<MarketPage> {
             child: CustomScrollView(
               slivers: [
                 _buildIndexCards(state.indices),
-                _buildFundTypeChips(state.fundType),
                 _buildSectorCards(state.sectors),
+                _buildRankHeader(state),
                 _buildSortBar(state),
-                _buildRankings(state),
+                _buildRankList(state),
                 const SliverToBoxAdapter(child: SizedBox(height: 80)),
               ],
             ),
@@ -160,22 +158,25 @@ class _MarketPageState extends State<MarketPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(i.name, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                i.current.toStringAsFixed(2),
-                                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: color),
-                              ),
-                              const SizedBox(width: 6),
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 2),
-                                child: Text(
-                                  '${isUp ? '+' : ''}${i.changeRate.toStringAsFixed(2)}%',
-                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  i.current.toStringAsFixed(2),
+                                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: color),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 2),
+                                  child: Text(
+                                    '${isUp ? '+' : ''}${i.changeRate.toStringAsFixed(2)}%',
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -190,50 +191,7 @@ class _MarketPageState extends State<MarketPage> {
     );
   }
 
-  // ────────────────────── 2. 基金类型 Chips ──────────────────────
-  Widget _buildFundTypeChips(String selectedType) {
-    return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        height: 38,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          itemCount: _fundTypes.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 8),
-          itemBuilder: (context, idx) {
-            final ft = _fundTypes[idx];
-            final isSelected = selectedType == ft.$1;
-            return GestureDetector(
-              onTap: () {
-                if (!isSelected) {
-                  context.read<MarketBloc>().add(MarketChangeFundType(ft.$1));
-                }
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppTheme.primary : AppTheme.bgSecondary,
-                  borderRadius: BorderRadius.circular(19),
-                ),
-                child: Text(
-                  ft.$2,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                    color: isSelected ? Colors.white : AppTheme.textSecondary,
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  // ────────────────────── 3. 热门板块排行 ──────────────────────
+  // ────────────────────── 2. 热门板块排行 ──────────────────────
   Widget _buildSectorCards(List<SectorRankItem> sectors) {
     if (sectors.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
 
@@ -304,10 +262,95 @@ class _MarketPageState extends State<MarketPage> {
     );
   }
 
-  // ────────────────────── 4. 排序栏 ──────────────────────
+  // ────────────────────── 3. 涨幅榜/跌幅榜 Tab + 排行列表 ──────────────────────
+  // ────────────────────── 3a. 涨幅榜/跌幅榜 Tab 栏 ──────────────────────
+  Widget _buildRankHeader(MarketState state) {
+    final isGainers = state.tabIndex == 0;
+    final label = _dayChangeLabel;
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text('基金排行 · $label', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text('Top20', style: TextStyle(fontSize: 10, color: AppTheme.primary)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Container(
+              decoration: BoxDecoration(
+                color: AppTheme.bgSecondary,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => context.read<MarketBloc>().add(MarketChangeTab(0)),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isGainers ? AppTheme.upColor : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '涨幅榜',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: isGainers ? Colors.white : AppTheme.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => context.read<MarketBloc>().add(MarketChangeTab(1)),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: !isGainers ? AppTheme.downColor : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '跌幅榜',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: !isGainers ? Colors.white : AppTheme.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ────────────────────── 3b. 排序栏 ──────────────────────
   Widget _buildSortBar(MarketState state) {
-    const sorts = [
-      ('r', '日涨跌'),
+    final sorts = [
+      ('r', _dayChangeLabel),
       ('zzf', '周涨跌'),
       ('1yzf', '月涨跌'),
       ('3yzf', '三月'),
@@ -317,7 +360,7 @@ class _MarketPageState extends State<MarketPage> {
 
     return SliverToBoxAdapter(
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
         decoration: BoxDecoration(
           color: AppTheme.bgSecondary,
@@ -339,10 +382,9 @@ class _MarketPageState extends State<MarketPage> {
                       padding: const EdgeInsets.only(right: 4),
                       child: GestureDetector(
                         onTap: () {
-                          final newOrder = isSelected
-                              ? (state.order == 'desc' ? 'asc' : 'desc')
-                              : 'desc';
-                          context.read<MarketBloc>().add(MarketChangeSort(s.$1, newOrder));
+                          if (!isSelected) {
+                            context.read<MarketBloc>().add(MarketChangeSort(s.$1));
+                          }
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -350,26 +392,13 @@ class _MarketPageState extends State<MarketPage> {
                             color: isSelected ? AppTheme.primary.withValues(alpha: 0.1) : Colors.transparent,
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                s.$2,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                                  color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
-                                ),
-                              ),
-                              if (isSelected) ...[
-                                const SizedBox(width: 2),
-                                Icon(
-                                  state.order == 'desc' ? Icons.arrow_drop_down : Icons.arrow_drop_up,
-                                  size: 16,
-                                  color: AppTheme.primary,
-                                ),
-                              ],
-                            ],
+                          child: Text(
+                            s.$2,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                              color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
+                            ),
                           ),
                         ),
                       ),
@@ -384,15 +413,12 @@ class _MarketPageState extends State<MarketPage> {
     );
   }
 
-  // ────────────────────── 5. 基金排行列表 ──────────────────────
-  Widget _buildRankings(MarketState state) {
-    if (state.isRefreshing && state.rankings.isEmpty) {
-      return const SliverToBoxAdapter(
-        child: Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-      );
-    }
+  // ────────────────────── 3c. 排行列表 ──────────────────────
+  Widget _buildRankList(MarketState state) {
+    final isGainers = state.tabIndex == 0;
+    final items = isGainers ? state.gainers : state.losers;
 
-    if (state.rankings.isEmpty) {
+    if (items.isEmpty) {
       return const SliverToBoxAdapter(
         child: Center(
           child: Padding(
@@ -410,18 +436,19 @@ class _MarketPageState extends State<MarketPage> {
     }
 
     return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, idx) {
-            final item = state.rankings[idx];
+            final item = items[idx];
             return _RankItemTile(
               rank: idx + 1,
               item: item,
+              sortType: state.sortType,
               onTap: () => context.push('/detail/${item.code}'),
             );
           },
-          childCount: state.rankings.length,
+          childCount: items.length,
         ),
       ),
     );
@@ -432,13 +459,26 @@ class _MarketPageState extends State<MarketPage> {
 class _RankItemTile extends StatelessWidget {
   final int rank;
   final FundRankItem item;
+  final String sortType;
   final VoidCallback onTap;
 
-  const _RankItemTile({required this.rank, required this.item, required this.onTap});
+  const _RankItemTile({required this.rank, required this.item, required this.sortType, required this.onTap});
+
+  double get _sortValue {
+    switch (sortType) {
+      case 'r':    return item.dayChange;
+      case 'zzf':  return item.weekChange;
+      case '1yzf': return item.monthChange;
+      case '3yzf': return item.threeMonthChange;
+      case '6yzf': return item.halfYearChange;
+      case '1nzf': return item.yearChange;
+      default:     return item.dayChange;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final isUp = item.dayChange >= 0;
+    final isUp = _sortValue >= 0;
     final color = isUp ? AppTheme.upColor : AppTheme.downColor;
 
     final rankColor = rank == 1
@@ -521,7 +561,7 @@ class _RankItemTile extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    '${isUp ? '+' : ''}${item.dayChange.toStringAsFixed(2)}%',
+                    '${isUp ? '+' : ''}${_sortValue.toStringAsFixed(2)}%',
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color),
                   ),
                 ),

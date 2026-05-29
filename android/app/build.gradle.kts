@@ -46,11 +46,8 @@ android {
 }
 
 dependencies {
-    // ML Kit language packs - plugin declares compileOnly, we need implementation for runtime
+    // ML Kit - 只保留中文识别，砍掉梵文/日文/韩文（省 ~25MB）
     implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
-    implementation("com.google.mlkit:text-recognition-devanagari:16.0.1")
-    implementation("com.google.mlkit:text-recognition-japanese:16.0.1")
-    implementation("com.google.mlkit:text-recognition-korean:16.0.1")
 }
 
 flutter {

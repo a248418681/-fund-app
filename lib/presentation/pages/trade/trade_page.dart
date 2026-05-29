@@ -471,7 +471,7 @@ class _AddTradeSheetState extends State<_AddTradeSheet> {
           firstDate: DateTime(2020),
           lastDate: DateTime.now(),
           builder: (_, child) => Theme(
-            data: Theme.of(context).copyWith(colorScheme: ColorScheme.light(primary: AppTheme.primary)),
+            data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: AppTheme.primary)),
             child: child!,
           ),
         );

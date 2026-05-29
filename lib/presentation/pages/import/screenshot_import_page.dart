@@ -1,11 +1,10 @@
-import 'dart:io';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:paddle_ocr_flutter/paddle_ocr_flutter.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/entities/fund_entity.dart';
@@ -14,6 +13,29 @@ import '../../../core/di/injection.dart';
 import '../../../utils/ocr_service.dart';
 import '../../bloc/holdings/holdings_bloc.dart';
 import '../../bloc/holdings/holdings_event.dart';
+
+/// OCR常见字形混淆字纠错映射（通用，非硬编码特定基金）
+/// 来源：ML Kit中文OCR高频误识统计，适用于任何含这些字的基金名
+const Map<String, String> _ocrCharCorrections = {
+  '永嘉': '永赢',  // 赢→嘉（字形相似）
+  '生夏': '华夏',  // 华→生（字形相似）
+  '混台': '混合',  // 合→台（字形极似）
+  '指教': '指数',  // 数→教（字形相似）
+  '増强': '增强',  // 增→増（日式汉字）
+  '利技': '科技',  // 科→利（字形部分相似）
+  '专精特新量化达股': '专精特新量化选股',  // 选→达
+};
+
+/// 对OCR识别的基金名做通用字形纠错
+String _correctOcrName(String name) {
+  var s = name;
+  for (final entry in _ocrCharCorrections.entries) {
+    if (s.contains(entry.key)) {
+      s = s.replaceAll(entry.key, entry.value);
+    }
+  }
+  return s;
+}
 
 /// 导入操作类型
 enum ImportOperationType {
@@ -27,14 +49,6 @@ enum ImportOperationType {
 /// 4个步骤：选择图片 → 识别中 → 预览确认 → 导入中
 /// 分段式匹配引擎的段结构体
 /// OCR文本块的坐标信息
-class _OcrBlock {
-  final String text;
-  final double avgY;  // 代表Y坐标
-  final int minX;     // 最左X坐标
-  final double centerX; // 中心X坐标
-  _OcrBlock({required this.text, required this.avgY, required this.minX, required this.centerX});
-}
-
 class _FundNameSegments {
   final String company;  // 基金公司名（2-4字）
   final String? topic;    // 板块/主题特征词
@@ -103,18 +117,18 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
   Widget _buildUploadStep() {
     return Column(
       children: [
-        Expanded(
+        const Expanded(
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.photo_library_outlined,
                     size: 64, color: AppTheme.textMuted),
-                const SizedBox(height: 16),
-                const Text('选择持仓截图',
+                SizedBox(height: 16),
+                Text('选择持仓截图',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600,
                         color: AppTheme.textPrimary)),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text('支持支付宝、天天基金等平台截图',
                     style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
               ],
@@ -205,21 +219,15 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
       if (!mounted) return;
       setState(() { _ocrProgress = 0.2; _ocrStatus = '初始化OCR引擎...'; });
 
-      // 根据平台选择 OCR 引擎
-      // Android: PaddleOCR（MLKit 在部分设备闪退）
-      // iOS: MLKit（稳定，PaddleOCR 暂不支持 iOS）
-      String text;
-      if (Platform.isAndroid) {
-        text = await _recognizeWithPaddleOcr(imagePath);
-      } else if (Platform.isIOS) {
-        text = await _recognizeWithMlKit(imagePath);
-      } else {
-        if (mounted) { _showError('当前平台不支持OCR'); setState(() => _step = _ImportStep.upload); }
-        return;
-      }
+      // 双端统一使用 Google ML Kit（识别质量优于 PaddleOCR）
+      // V9: 使用2D block坐标横向解析，不再压扁为文本
+      final ocrResult = await _recognizeWithMlKitV9(imagePath);
+      final text = ocrResult['text'] as String;
+      final blocks = ocrResult['blocks'] as List<OcrBlock>;
+      final imageWidth = ocrResult['imageWidth'] as double;
 
       if (!mounted) return;
-      debugPrint('[OCR] 识别文本长度: ${text.length}');
+      debugPrint('[OCR] 识别文本长度: ${text.length}, blocks: ${blocks.length}');
       // ★ 调试：写入文件保存完整原始文本
       try {
         final dir = Directory(r'/data/data/com.example.fund_app/files');
@@ -242,7 +250,7 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
       debugPrint('[OCR] 前200字: ${text.length > 200 ? text.substring(0, 200) : text}');
       _rawOcrText = text; // 调试用
 
-      if (text.trim().isEmpty) {
+      if (text.trim().isEmpty && blocks.isEmpty) {
         if (mounted) { _showError('未识别到文字，请确保截图清晰'); setState(() => _step = _ImportStep.upload); }
         return;
       }
@@ -250,7 +258,17 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
       if (!mounted) return;
       setState(() { _ocrProgress = 0.7; _ocrStatus = '解析持仓信息...'; });
 
-      final parsed = OcrService.parseHoldingText(text);
+      // ★ V9优先：用block坐标横向解析，回退到V8文本解析
+      List<RecognizedHolding> parsed;
+      if (blocks.isNotEmpty) {
+        parsed = OcrService.parseHoldingBlocks(blocks, imageWidth: imageWidth);
+        if (parsed.isEmpty) {
+          debugPrint('[OCR] V9解析无结果，回退到V8文本解析');
+          parsed = OcrService.parseHoldingText(text);
+        }
+      } else {
+        parsed = OcrService.parseHoldingText(text);
+      }
       debugPrint('[OCR] 解析结果: ${parsed.length} 条');
 
       // ★ 即使解析失败也跳转到preview，方便看调试面板
@@ -262,7 +280,7 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
           });
           // 显示警告但不阻止用户看调试面板
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: const Text('未识别到持仓信息，请查看调试面板'),
+            const SnackBar(content: Text('未识别到持仓信息，请查看调试面板'),
                 behavior: SnackBarBehavior.floating),
           );
         }
@@ -284,246 +302,141 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
     }
   }
 
-  /// Android: PaddleOCR 本地离线识别
-  Future<String> _recognizeWithPaddleOcr(String imagePath) async {
-    final ocr = PaddleOcrFlutter();
-    try {
-      await ocr.init();
-      if (!mounted) setState(() { _ocrProgress = 0.4; _ocrStatus = '识别文字中...'; });
-      final results = await ocr.recognize(imagePath);
-      // ★ Step1: 保存原始块数据用于X坐标分析
-      try {
-        final blockData = results.map((r) {
-          if (r.points.isEmpty) return {'text': r.text, 'avgY': 0, 'minX': 0, 'maxX': 0, 'minY': 0, 'maxY': 0, 'w': 0, 'h': 0, 'centerX': 0};
-          final xs = r.points.map((p) => p.x).toList();
-          final ys = r.points.map((p) => p.y).toList();
-          final minX = xs.reduce((a, b) => a < b ? a : b);
-          final maxX = xs.reduce((a, b) => a > b ? a : b);
-          final minY = ys.reduce((a, b) => a < b ? a : b);
-          final maxY = ys.reduce((a, b) => a > b ? a : b);
-          return {'text': r.text, 'avgY': ys.reduce((a, b) => a + b) / ys.length,
-            'minX': minX, 'maxX': maxX, 'minY': minY, 'maxY': maxY,
-            'w': maxX - minX, 'h': maxY - minY,
-            'centerX': (minX + maxX) / 2};
-        }).toList();
-        await File('/data/data/com.example.fund_app/files/fund_ocr_blocks.json').writeAsString(
-          const JsonEncoder.withIndent('  ').convert(blockData));
-        debugPrint('[OCR-DEBUG] 已保存 ${blockData.length} 个原始块到 files/fund_ocr_blocks.json');
-      } catch(e) { debugPrint('[OCR-DEBUG] 保存块数据失败: $e'); }
-      // ★ 暂时回退到原来的简单合并，测试识别率
-      final rawText = results.map((r) => r.text).join('\n');
-      debugPrint('[OCR] 原始合并行数: ${rawText.split('\n').length}');
-      debugPrint('[OCR] 原始合并前300字: ${rawText.substring(0, rawText.length > 300 ? 300 : rawText.length)}');
-      // 两种合并方式都输出，方便对比
-      final smartMerged = _smartMergeOcrLines(rawText);
-      debugPrint('[OCR] smartMerge后行数: ${smartMerged.split('\n').length}');
-      final yMerged = _mergeOcrByYCoordinate(results);
-      debugPrint('[OCR] Y坐标合并后行数: ${yMerged.split('\n').length}');
-      // ★ 切换到Y坐标合并（按视觉行合并，解决基金名截断和收益率%粘连问题）
-      return yMerged;
-    } finally {
-      await ocr.dispose();
-    }
-  }
-
-  /// 按Y坐标合并OCR结果为逻辑行
-  /// PaddleOCR会把一行文字拆成多个块，用bounding box的Y坐标
-  /// 判断哪些块属于同一行，再按X坐标排序拼接
-  /// 列感知 OCR 文本合并（Column-Aware Merge）
-  /// 思路：先分析 X 坐标分布找列分界线，分列后各列内按 Y 合并，
-  /// 最后跨列按 Y 对齐拼接为单行文本（保持 V8 解析器输入格式不变）
-  /// 相比纯 Y-first 合并：防止左列基金名/后缀块被错误混入右列金额列
-  static String _mergeOcrByYCoordinate(List<OcrResult> results) {
-    if (results.isEmpty) return '';
-
-    // 提取所有块（含 centerX）
-    final blocks = <_OcrBlock>[];
-    for (final r in results) {
-      if (r.text.trim().isEmpty) continue;
-      if (r.points.isEmpty) continue;
-      final ys = r.points.map((p) => p.y.toDouble()).toList();
-      final xs = r.points.map((p) => p.x.toDouble()).toList();
-      final avgY = ys.reduce((a, b) => a + b) / ys.length;
-      final minX = xs.reduce((a, b) => a < b ? a : b).toInt();
-      final maxX = xs.reduce((a, b) => a > b ? a : b).toInt();
-      final centerX = (minX + maxX) / 2.0;
-      blocks.add(_OcrBlock(
-        text: r.text.trim(),
-        avgY: avgY,
-        minX: minX,
-        centerX: centerX,
-      ));
-    }
-
-    if (blocks.isEmpty) return '';
-
-    // ── Step 1: 估算 Y 合并阈值（相邻 Y 差中位数 × 0.7）
-    blocks.sort((a, b) => a.avgY.compareTo(b.avgY));
-    final yDiffs = <double>[];
-    for (int i = 1; i < blocks.length; i++) {
-      yDiffs.add((blocks[i].avgY - blocks[i - 1].avgY).abs());
-    }
-    yDiffs.sort();
-    final yThreshold = yDiffs.isNotEmpty
-        ? (yDiffs[yDiffs.length ~/ 2] * 0.7).clamp(20.0, 80.0)
-        : 34.0;
-
-    // ── Step 2: 自适应找列分界线（centerX 最大 gap）
-    // 只用数据区（页眉页脚无数据，噪声多）
-    final dataBlocks = blocks.where((b) => b.avgY > 600 && b.avgY < 7500).toList();
-    final allCX = dataBlocks.map((b) => b.centerX).toSet().toList()..sort();
-
-    // 找最大 gap（>100px 才算有效列分界线，最多取 2 条）
-    final gaps = <(double gap, double lo, double hi)>[];
-    for (int i = 0; i < allCX.length - 1; i++) {
-      final gap = allCX[i + 1] - allCX[i];
-      if (gap >= 100) {
-        gaps.add((gap, allCX[i], allCX[i + 1]));
-      }
-    }
-    gaps.sort((a, b) => b.$1.compareTo(a.$1));
-
-    // 取前两条 gap 的中点作为分界线
-    List<double> splits;
-    if (gaps.length >= 2) {
-      splits = [
-        (gaps[0].$2 + gaps[0].$3) / 2,
-        (gaps[1].$2 + gaps[1].$3) / 2,
-      ];
-    } else if (gaps.length == 1) {
-      splits = [(gaps[0].$2 + gaps[0].$3) / 2];
-    } else {
-      // Fallback: 固定分界线（支付宝两列布局典型值）
-      splits = [480.0, 850.0];
-    }
-    splits.sort();
-
-    // ── Step 3: 分列
-    final cols = List.generate(splits.length + 1, (_) => <_OcrBlock>[]);
-    for (final b in blocks) {
-      int colIdx = 0;
-      for (final s in splits) {
-        if (b.centerX < s) break;
-        colIdx++;
-      }
-      cols[colIdx].add(b);
-    }
-
-    // ── Step 4: 各列内按 Y 合并（返回 List<(avgY, mergedText)>）
-    List<(double, String)> colMerge(List<_OcrBlock> col) {
-      if (col.isEmpty) return [];
-      col.sort((a, b) => a.avgY.compareTo(b.avgY));
-      final rows = <List<_OcrBlock>>[];
-      var cur = <_OcrBlock>[col.first];
-      for (int i = 1; i < col.length; i++) {
-        if ((col[i].avgY - cur.first.avgY).abs() < yThreshold) {
-          cur.add(col[i]);
-        } else {
-          rows.add(cur);
-          cur = [col[i]];
-        }
-      }
-      rows.add(cur);
-      return rows.map((row) {
-        row.sort((a, b) => a.minX.compareTo(b.minX));
-        final text = row.map((b) => b.text).where((t) => t.isNotEmpty).join('');
-        return (row.first.avgY, text);
-      }).toList();
-    }
-
-    final colRows = cols.map(colMerge).toList();
-
-    // ── Step 5: 跨列按 Y 对齐拼接为单行（保持 V8 解析器输入格式）
-    // 收集所有唯一 Y 值
-    final allYs = <double>{};
-    for (final cr in colRows) {
-      for (final (y, _) in cr) allYs.add(y);
-    }
-    final sortedYs = allYs.toList()..sort();
-
-    final lines = <String>[];
-    for (final y in sortedYs) {
-      // 从各列取 Y 最接近的行拼接
-      final parts = <String>[];
-      for (final cr in colRows) {
-        final match = cr.firstWhere(
-          (item) => (item.$1 - y).abs() < yThreshold,
-          orElse: () => (0.0, ''),
-        );
-        if (match.$2.isNotEmpty) parts.add(match.$2);
-      }
-      if (parts.isNotEmpty) lines.add(parts.join(''));
-    }
-
-    // 去重：同一逻辑行因三列合并产生2-3个副本
-    final uniqueLines = <String>[];
-    for (final line in lines) {
-      if (uniqueLines.isEmpty || line != uniqueLines.last) {
-        uniqueLines.add(line);
-      }
-    }
-    return uniqueLines.join('\n');
-  }
-  /// 例如：
-  ///   "天弘恒生科技指数型发起式" + "证券投资基金(QDII)C"
-  ///   → "天弘恒生科技指数型发起式证券投资基金(QDII)C"
-  static String _smartMergeOcrLines(String text) {
-    final lines = text.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
-    if (lines.isEmpty) return text;
-
-    // 判断一行是否是"分隔线"（金额、数字、元数据关键词）
-    bool isSeparator(String line) {
-      if (RegExp(r'[¥￥]').hasMatch(line)) return true;
-      if (RegExp(r'\d{1,3}(,\d{3})+\.\d{2}').hasMatch(line)) return true;
-      // 裸数字金额：197.12 / 1,361.25 / 349.96（天天基金格式）
-      if (RegExp(r'^[+-]?\d[\d,]*\.\d{2}$').hasMatch(line)) return true;
-      // 纯数字收益行：+22.12 / -1.88 / +0.32
-      if (RegExp(r'^[+-]\d[\d,]*\.\d{2}$').hasMatch(line)) return true;
-      const metaKw = [
-        '持有金额', '持有收益', '累计收益', '日收益', '昨日收益',
-        '持有天数', '估值', '净值', '涨跌幅', '收益率', '操作',
-        '确认', '买入', '卖出', '定投', '赎回', '转换', '排序',
-        '全部', '我的', '持仓', '市值', '金额', '份额', '收益',
-      ];
-      for (final kw in metaKw) {
-        if (line.length <= kw.length + 4 && line.contains(kw)) return true;
-      }
-      return false;
-    }
-
-    final result = <String>[];
-    final buffer = <String>[];
-
-    for (final line in lines) {
-      if (isSeparator(line)) {
-        // 遇到分隔线，把buffer里的内容合并后加入结果
-        if (buffer.isNotEmpty) {
-          result.add(buffer.join());
-          buffer.clear();
-        }
-        result.add(line);
-      } else {
-        buffer.add(line);
-      }
-    }
-    if (buffer.isNotEmpty) {
-      result.add(buffer.join());
-    }
-
-    return result.join('\n');
-  }
-
-  /// iOS: MLKit 识别（iOS 上稳定）
-  Future<String> _recognizeWithMlKit(String imagePath) async {
+  /// ML Kit V9识别（返回 line 级坐标 + 文本，用于横向解析）
+  /// 关键点：不要使用 recognizedText.blocks 作为解析单元，block 可能包含多行，
+  /// 支付宝持仓页必须用 line 级别坐标才能稳定分组。
+  Future<Map<String, dynamic>> _recognizeWithMlKitV9(String imagePath) async {
     final recognizer = TextRecognizer(script: TextRecognitionScript.chinese);
     try {
-      if (!mounted) setState(() { _ocrProgress = 0.4; _ocrStatus = '识别文字中...'; });
+      if (mounted) {
+        setState(() { _ocrProgress = 0.4; _ocrStatus = '识别文字中...'; });
+      }
+
+      double imageWidth = 1080.0;
+      double imageHeight = 0.0;
+      try {
+        final bytes = await File(imagePath).readAsBytes();
+        final codec = await ui.instantiateImageCodec(bytes);
+        final frame = await codec.getNextFrame();
+        imageWidth = frame.image.width.toDouble();
+        imageHeight = frame.image.height.toDouble();
+        frame.image.dispose();
+      } catch (e) {
+        debugPrint('[OCR] 读取图片尺寸失败，使用坐标估算: $e');
+      }
+
       final inputImage = InputImage.fromFilePath(imagePath);
       final recognizedText = await recognizer.processImage(inputImage);
-      return recognizedText.text;
+
+      // 提取 line 级坐标信息。block 粒度太粗，换一张图就容易把多行吞成一个块。
+      final blocks = <OcrBlock>[];
+      for (final block in recognizedText.blocks) {
+        for (final line in block.lines) {
+          final text = line.text.trim();
+          if (text.isEmpty) continue;
+          final rect = line.boundingBox;
+          blocks.add(OcrBlock(
+            text: text,
+            left: rect.left,
+            top: rect.top,
+            right: rect.right,
+            bottom: rect.bottom,
+          ));
+          if (rect.right > imageWidth) imageWidth = rect.right;
+        }
+      }
+
+      // 极少数机型 line 为空时，退回 block 级数据，避免直接崩掉。
+      if (blocks.isEmpty) {
+        for (final block in recognizedText.blocks) {
+          final text = block.text.trim();
+          if (text.isEmpty) continue;
+          final rect = block.boundingBox;
+          blocks.add(OcrBlock(
+            text: text,
+            left: rect.left,
+            top: rect.top,
+            right: rect.right,
+            bottom: rect.bottom,
+          ));
+          if (rect.right > imageWidth) imageWidth = rect.right;
+        }
+      }
+
+      final blockMaps = blocks.map((b) => <String, dynamic>{
+        'text': b.text,
+        'left': b.left,
+        'top': b.top,
+        'right': b.right,
+        'bottom': b.bottom,
+        'cx': b.centerx,
+        'cy': b.centery,
+      }).toList();
+      final text = _mergeMlKitBlocks(blockMaps);
+
+      // 保存 line 坐标 JSON 供调试，不再写 blocks.toString()。
+      try {
+        final dir = Directory(r'/data/data/com.example.fund_app/files');
+        if (await dir.exists()) {
+          final file = File('${dir.path}/fund_ocr_blocks.json');
+          await file.writeAsString(jsonEncode({
+            'imageWidth': imageWidth,
+            'imageHeight': imageHeight,
+            'lines': blockMaps,
+          }));
+        }
+      } catch (e) {
+        debugPrint('[OCR] 保存blocks失败: $e');
+      }
+
+      return {
+        'text': text,
+        'blocks': blocks,
+        'imageWidth': imageWidth,
+        'imageHeight': imageHeight,
+      };
     } finally {
       await recognizer.close();
     }
+  }
+  
+  /// 合并 MLKit blocks（同行合并）
+  String _mergeMlKitBlocks(List<Map<String, dynamic>> blocks) {
+    if (blocks.isEmpty) return '';
+    
+    // 计算全局平均行高（用于固定阈值）
+    final heights = blocks.map((b) => (b['bottom'] as double) - (b['top'] as double)).toList();
+    heights.sort();
+    final medianHeight = heights.isNotEmpty ? heights[heights.length ~/ 2] : 20.0;
+    // 固定阈值：行高的40%，但最小10px（小字体也够用）
+    final fixedThreshold = (medianHeight * 0.4).clamp(10.0, 25.0);
+    
+    // 按 centerY 排序（比 top 更鲁棒，处理基线偏移）
+    blocks.sort((a, b) {
+      final ca = ((a['top'] as double) + (a['bottom'] as double)) / 2;
+      final cb = ((b['top'] as double) + (b['bottom'] as double)) / 2;
+      return ca.compareTo(cb);
+    });
+    
+    final lines = <List<Map<String, dynamic>>>[];
+    double? lastCenterY;
+    
+    for (final block in blocks) {
+      final centerY = ((block['top'] as double) + (block['bottom'] as double)) / 2;
+      
+      if (lastCenterY == null || (centerY - lastCenterY).abs() > fixedThreshold) {
+        // 新行
+        lines.add([block]);
+        lastCenterY = centerY;
+      } else {
+        // 同一行，按 X 排序后添加
+        lines.last.add(block);
+        lines.last.sort((a, b) => (a['left'] as double).compareTo(b['left'] as double));
+      }
+    }
+    
+    // 合并每行的文本
+    return lines.map((line) => line.map((b) => b['text'] as String).join(' ')).join('\n');
   }
 
   Future<Set<String>> _getExistingHoldingCodes() async {
@@ -553,7 +466,7 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
     String? suffix;
     if (s.length >= 2) {
       final lastChar = s[s.length - 1];
-      if (RegExp(r'^[a-zA-Z]$').hasMatch(lastChar)) {
+      if (RegExp(r'^[a-zA-Z]\.').hasMatch(lastChar)) {
         suffix = lastChar;
         s = s.substring(0, s.length - 1);
       }
@@ -561,7 +474,7 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
     // 去除常见类型后缀（越往后越通用）
     const typeSuffixes = [
       '灵活配置混合', '定期开放债券', '混合型', '债券型', '货币型',
-      '股票型', '指数型', 'lof', 'qdii', '混合', '债券', '货币', '发起式',
+      '股票型', '股票', '指数型', 'lof', 'qdii', '混合', '债券', '货币', '发起式',
     ];
     String? typeTag;
     for (final t in typeSuffixes) {
@@ -579,7 +492,7 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
       '有色金属', '绝对收益', '金银珠宝', '房地产', '纳斯达克', '标普500',
       '沪深300', '中证500', '中证1000', '高端制造', '先进制造',
       // 4字特征词
-      '产业先锋', '优势产业', '新能源', '半导体', '光伏', '白酒',
+      '高端装备', '产业先锋', '优势产业', '新能源', '半导体', '光伏', '白酒',
       '创业板', '科创板', '互联网', '消费', '银行', '证券', '煤炭',
       // 3字特征词
       '碳中和', '新丝路', '低碳', '军工', '价值', '成长', '红利', '量化',
@@ -607,28 +520,49 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
     );
   }
 
-  /// 用各段组合搜索API，返回候选列表（按精度从高到低）
-  Future<List<FundInfo>> _searchBySegments(_FundNameSegments seg) async {
-    // 搜索关键词组合，按精度从高到低排列
+  /// 用各段组合搜索API，返回候选列表（搜集所有key的搜索结果用于打分选最佳）
+  Future<List<FundInfo>> _searchBySegments(_FundNameSegments seg, String fullOcrName) async {
+    // 搜索关键词组合
     final List<String> keys = [];
     if (seg.company.isNotEmpty && seg.topic != null) {
       keys.addAll(['${seg.company}$seg.topic', seg.topic!, seg.company]);
+      // 渐进式去前缀：OCR可能把公司名首字读错，去掉首字再搜
+      // 例如 "云利高端装备" → "利高端装备" 能匹配到 "宏利高端装备"
+      if (seg.company.length > 1) {
+        keys.add('${seg.company.substring(1)}$seg.topic');
+      }
+      if (seg.typeTag != null && seg.typeTag!.length >= 2) {
+        keys.add('${seg.topic}${seg.typeTag}');
+      }
     } else if (seg.topic != null) {
       keys.add(seg.topic!);
     } else if (seg.company.isNotEmpty) {
       keys.add(seg.company);
     }
 
+    // ★ 完整OCR名作为最优先搜索词（去除特殊字符提高命中率）
+    final cleanOcr = fullOcrName
+        .replaceAll(RegExp(r'[()（）\[\]【】\-—]'), '')
+        .replaceAll(RegExp(r'(lof|qdii?|etf|发起式)', caseSensitive: false), '')
+        .trim();
+    if (cleanOcr.length >= 3) {
+      keys.insert(0, cleanOcr);
+    }
+
+    // ★ 搜集所有key的搜索结果，不提前返回第一个
+    final allResults = <String, FundInfo>{};
     for (final key in keys) {
       if (key.length < 2) continue;
       try {
         final results = await getIt<FundRepository>()
             .searchFund(key)
             .timeout(const Duration(seconds: 5));
-        if (results.isNotEmpty) return results;
+        for (final r in results) {
+          allResults[r.code] = r; // 去重
+        }
       } catch (_) {}
     }
-    return [];
+    return allResults.values.toList();
   }
 
   /// 评分：各段独立命中得分，组合命中额外加分
@@ -646,15 +580,30 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
     if (topic != null && apiName.contains(topic)) score += 4;
     // 类型匹配 +2（模糊也 +1）
     if (typeTag != null) {
-      if (apiName.contains(typeTag)) score += 2;
-      else if (typeTag == '混合' && (apiName.contains('混合型') || apiName.contains('灵活配置'))) score += 1;
+      if (apiName.contains(typeTag)) {
+        score += 2;
+      } else if (typeTag == '混合' && (apiName.contains('混合型') || apiName.contains('灵活配置'))) {
+        score += 1;
+      }
     }
     // 分类后缀命中（C/A/D）+2
     if (suffix != null && apiName.endsWith(suffix)) score += 2;
     // 公司+板块同时命中 → 强信号，+5
     if (company.isNotEmpty && topic != null
-        && apiName.contains(company) && apiName.contains(topic)) score += 5;
+        && apiName.contains(company) && apiName.contains(topic)) {
+      score += 5;
+    }
     return score;
+  }
+
+  /// 归一化名称，只保留汉字、字母、数字，用于字符重合度计算
+  static String _normalizeForOverlap(String name) {
+    // 去掉所有非汉字/字母/数字 + 常见OCR残留 (LOF)/(QDI)/(QDII)/(ETF) 等
+    return name
+        .replaceAll(RegExp(r'[^一-龥a-zA-Z0-9]'), '')
+        .toLowerCase()
+        .replaceAll(RegExp(r'lof|qdii?|etf|发起式'), '')
+        .replaceAll(RegExp(r'\(|\)'), '');
   }
 
   /// 计算两个名字的字符级重合度（用于同分 tiebreaker）
@@ -671,6 +620,7 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
 
   Future<List<_EnhancedHoldingItem>> _enhanceHoldings(
       List<RecognizedHolding> parsed, Set<String> existingCodes) async {
+    debugPrint('[Import] ═══ _enhanceHoldings V2.1 (overlap guard) ═══ ${parsed.length}条待匹配');
     // 并行处理所有基金
     final items = await Future.wait(
       parsed.map((h) async {
@@ -681,6 +631,9 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
           operationType: existingCodes.contains(h.code)
               ? ImportOperationType.add
               : ImportOperationType.sync,
+          yesterdayProfit: h.yesterdayProfit,
+          holdingProfit: h.holdingProfit,
+          holdingProfitRate: h.holdingProfitRate,
         );
 
         try {
@@ -695,13 +648,14 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
               item.fundName = match.name;
               item.code = match.code;
               item.needsCodeMatch = false;
-              if (match.name.length > item.name.length) item.name = match.name;
+              item.name = match.name;
             }
           }
-          // 无代码 → 分段式搜索
+          // 无代码 → 分段式搜索（先做OCR字形纠错再搜索）
           else if (h.name.length >= 3) {
-            final seg = _parseOcrSegments(h.name);
-            final results = await _searchBySegments(seg);
+            final correctedName = _correctOcrName(h.name);
+            final seg = _parseOcrSegments(correctedName);
+            final results = await _searchBySegments(seg, correctedName);
             if (results.isNotEmpty) {
               // 从候选中选得分最高的
               int bestIdx = 0, bestScore = 0;
@@ -722,11 +676,31 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
               // 公司名必须命中，否则匹配不可靠
               if (bestScore >= 4 && bestIdx < results.length) {
                 final match = results[bestIdx];
-                item.fundCode = match.code;
-                item.fundName = match.name;
-                item.code = match.code;
-                item.needsCodeMatch = false;
-                if (match.name.length > item.name.length) item.name = match.name;
+                // ★ Jaccard相似度验证：防止OCR错误名称匹配到完全无关的基金
+                // 公式: overlap / (ocrLen + matchLen - overlap)，阈值0.65
+                // 同时对极短名称做保护：min(3, jaccard结果)
+                final ocrPure = _normalizeForOverlap(h.name);
+                final matchPure = _normalizeForOverlap(match.name);
+                final overlap = _charOverlap(ocrPure, matchPure);
+                final jaccard = overlap > 0
+                    ? overlap / (ocrPure.length + matchPure.length - overlap)
+                    : 0.0;
+                debugPrint('[Import] OCR="$ocrPure"(${ocrPure.length}字) -> API="$matchPure"(${matchPure.length}字) score=$bestScore overlap=$overlap jaccard=${jaccard.toStringAsFixed(2)}');
+                // Jaccard阈值0.65：要求匹配字符占两者总字符的比例
+                // 对极短名(min=3)做兜底保护
+                const minJaccard = 0.65;
+                final minOverlapForShort = (ocrPure.length * 0.5).ceil().clamp(3, 10);
+                if (jaccard >= minJaccard || overlap >= minOverlapForShort) {
+                  item.fundCode = match.code;
+                  item.fundName = match.name;
+                  item.code = match.code;
+                  item.needsCodeMatch = false;
+                  item.name = match.name;
+                } else {
+                  debugPrint('[Import] ❌低相似度拒绝: jaccard=${jaccard.toStringAsFixed(2)}<$minJaccard overlap=$overlap<$minOverlapForShort');
+                }
+              } else {
+                debugPrint('[Import] 未匹配: OCR="${h.name}" bestScore=$bestScore (需要>=4)');
               }
             }
           }
@@ -797,7 +771,7 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
             left: 16, right: 16, top: 12,
             bottom: 12 + MediaQuery.of(context).padding.bottom,
           ),
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: AppTheme.bgSecondary,
             border: Border(top: BorderSide(color: AppTheme.borderColor)),
           ),
@@ -819,7 +793,7 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  child: Text('导入 ${_selectedCount} 只'),
+                  child: Text('导入 $_selectedCount 只'),
                 ),
               ),
             ],
@@ -906,6 +880,18 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
                           ],
                         ),
                         const SizedBox(height: 4),
+                        // 昨日收益/持有收益/持有收益率
+                        if (h.yesterdayProfit != null || h.holdingProfit != null) ...[
+                          Text(
+                            [
+                              if (h.yesterdayProfit != null) '昨日 ${h.yesterdayProfit! > 0 ? "+" : ""}${h.yesterdayProfit!.toStringAsFixed(2)}',
+                              if (h.holdingProfit != null) '持有 ${h.holdingProfit! > 0 ? "+" : ""}${h.holdingProfit!.toStringAsFixed(2)}',
+                              if (h.holdingProfitRate != null) '${h.holdingProfitRate! > 0 ? "+" : ""}${h.holdingProfitRate!.toStringAsFixed(2)}%',
+                            ].join(' | '),
+                            style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                          ),
+                          const SizedBox(height: 4),
+                        ],
                         Row(
                           children: [
                             _buildConfidenceBadge(h.confidence),
@@ -943,7 +929,7 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
                               contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(6),
-                                borderSide: BorderSide(color: AppTheme.borderColor),
+                                borderSide: const BorderSide(color: AppTheme.borderColor),
                               ),
                             ),
                             onChanged: (v) {
@@ -1111,7 +1097,7 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
   Widget _buildSearchPanel(_EnhancedHoldingItem h) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppTheme.bgPrimary,
         border: Border(top: BorderSide(color: AppTheme.borderColor)),
       ),
@@ -1176,10 +1162,10 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
       setState(() => h.searching = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('搜索失败，请检查网络后重试'),
+          const SnackBar(
+            content: Text('搜索失败，请检查网络后重试'),
             behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
+            duration: Duration(seconds: 2),
           ),
         );
       }
@@ -1205,10 +1191,10 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
       setState(() => h.targetSearching = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('搜索失败，请检查网络后重试'),
+          const SnackBar(
+            content: Text('搜索失败，请检查网络后重试'),
             behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
+            duration: Duration(seconds: 2),
           ),
         );
       }
@@ -1477,6 +1463,10 @@ class _EnhancedHoldingItem {
   String? fundCode;
   String? fundName;
   double? netValue;
+  // OCR识别的收益字段
+  double? yesterdayProfit;
+  double? holdingProfit;
+  double? holdingProfitRate;
   bool showSearch = false;
   bool searching = false;
   List<FundInfo> searchResults = [];
@@ -1499,6 +1489,9 @@ class _EnhancedHoldingItem {
     this.needsCodeMatch = false,
     this.selected = false,
     this.operationType = ImportOperationType.sync,
+    this.yesterdayProfit,
+    this.holdingProfit,
+    this.holdingProfitRate,
   }) {
     amountController.text = amount > 0 ? amount.toStringAsFixed(2) : '';
   }

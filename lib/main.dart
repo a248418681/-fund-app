@@ -8,10 +8,13 @@ import 'presentation/bloc/holdings/holdings_bloc.dart';
 import 'presentation/bloc/market/market_bloc.dart';
 import 'presentation/bloc/observer/app_bloc_observer.dart';
 import 'presentation/pages/settings/settings_page.dart';
+import 'utils/ocr_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await setupDependencies();
+  // 后台加载公司名列表（不阻塞启动）
+  OcrService.initCompanyNames();
   Bloc.observer = AppBlocObserver();
   runApp(const FundApp());
 }

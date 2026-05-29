@@ -9,20 +9,12 @@
 -dontwarn io.flutter.embedding.**
 -ignorewarnings
 
-# ML Kit Text Recognition - keep all language recognizers
+# ML Kit Text Recognition - Chinese only
 -keep class com.google.mlkit.vision.text.** { *; }
 -keep class com.google.android.gms.internal.** { *; }
 -dontwarn com.google.mlkit.vision.text.chinese.**
--dontwarn com.google.mlkit.vision.text.devanagari.**
--dontwarn com.google.mlkit.vision.text.japanese.**
--dontwarn com.google.mlkit.vision.text.korean.**
 
-# Paddle OCR
--keep class com.baidu.paddle.** { *; }
--keep class com.example.paddle_ocr_flutter.** { *; }
--dontwarn com.baidu.paddle.**
-
-# Preserve all native method names and the classes that contain them
+# Native methods
 -keepclasseswithmembernames class * {
     native <methods>;
 }

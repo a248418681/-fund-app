@@ -6,22 +6,22 @@ enum MarketStatus { initial, loading, loaded, error }
 class MarketState extends Equatable {
   final MarketStatus status;
   final List<MarketIndex> indices;
-  final List<FundRankItem> rankings;
+  final List<FundRankItem> gainers;   // 涨幅 Top20（经客户端重排序）
+  final List<FundRankItem> losers;    // 跌幅 Top20（经客户端重排序）
   final List<SectorRankItem> sectors;
-  final String sortType;
-  final String order;
-  final String fundType;
+  final int tabIndex;                 // 0=涨幅榜, 1=跌幅榜
+  final String sortType;              // r/zzf/1yzf/3yzf/6yzf/1nzf
   final bool isRefreshing;
   final String? errorMessage;
 
   const MarketState({
     this.status = MarketStatus.initial,
     this.indices = const [],
-    this.rankings = const [],
+    this.gainers = const [],
+    this.losers = const [],
     this.sectors = const [],
+    this.tabIndex = 0,
     this.sortType = 'r',
-    this.order = 'desc',
-    this.fundType = 'all',
     this.isRefreshing = false,
     this.errorMessage,
   });
@@ -29,27 +29,27 @@ class MarketState extends Equatable {
   MarketState copyWith({
     MarketStatus? status,
     List<MarketIndex>? indices,
-    List<FundRankItem>? rankings,
+    List<FundRankItem>? gainers,
+    List<FundRankItem>? losers,
     List<SectorRankItem>? sectors,
+    int? tabIndex,
     String? sortType,
-    String? order,
-    String? fundType,
     bool? isRefreshing,
     String? errorMessage,
   }) {
     return MarketState(
       status: status ?? this.status,
       indices: indices ?? this.indices,
-      rankings: rankings ?? this.rankings,
+      gainers: gainers ?? this.gainers,
+      losers: losers ?? this.losers,
       sectors: sectors ?? this.sectors,
+      tabIndex: tabIndex ?? this.tabIndex,
       sortType: sortType ?? this.sortType,
-      order: order ?? this.order,
-      fundType: fundType ?? this.fundType,
       isRefreshing: isRefreshing ?? this.isRefreshing,
       errorMessage: errorMessage ?? this.errorMessage,
     );
   }
 
   @override
-  List<Object?> get props => [status, indices, rankings, sectors, sortType, order, fundType, isRefreshing, errorMessage];
+  List<Object?> get props => [status, indices, gainers, losers, sectors, tabIndex, sortType, isRefreshing, errorMessage];
 }

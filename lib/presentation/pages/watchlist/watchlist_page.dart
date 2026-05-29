@@ -65,7 +65,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
                   color: AppTheme.bgSecondary,
                   child: Row(
                     children: [
-                      Icon(Icons.access_time, size: 14, color: AppTheme.textMuted),
+                      const Icon(Icons.access_time, size: 14, color: AppTheme.textMuted),
                       const SizedBox(width: 4),
                       Text(
                         '更新于 ${state.lastRefreshTime}',
@@ -140,7 +140,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.star_border, size: 64, color: AppTheme.textMuted),
+          const Icon(Icons.star_border, size: 64, color: AppTheme.textMuted),
           const SizedBox(height: 16),
           const Text(
             '暂无自选基金',
@@ -188,7 +188,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
               children: [
                 _buildSortHeader('估算净值', 80, WatchlistSortField.estimateValue, state),
                 const SizedBox(width: 16),
-                _buildSortHeader(changeLabel, 60, WatchlistSortField.estimateChange, state),
+                _buildSortHeader(changeLabel, 72, WatchlistSortField.estimateChange, state),
               ],
             ),
           ),
@@ -237,7 +237,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
       color: AppTheme.bgSecondary,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppTheme.borderColor, width: 0.5),
+        side: const BorderSide(color: AppTheme.borderColor, width: 0.5),
       ),
       child: InkWell(
         onTap: () => context.push('/detail/${item.code}'),

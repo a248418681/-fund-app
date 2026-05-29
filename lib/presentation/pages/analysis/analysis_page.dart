@@ -180,7 +180,7 @@ class AnalysisPage extends StatelessWidget {
               const SizedBox(width: 8),
               _statPill('总成本', '¥${s.totalCost.toStringAsFixed(0)}', Colors.white.withValues(alpha: 0.2)),
               const SizedBox(width: 8),
-              _statPill('盈利', '$upCount/${totalCount}只', Colors.white.withValues(alpha: 0.2)),
+              _statPill('盈利', '$upCount/$totalCount只', Colors.white.withValues(alpha: 0.2)),
             ],
           ),
         ],

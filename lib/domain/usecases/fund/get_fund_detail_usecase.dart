@@ -3,8 +3,7 @@ import '../../repositories/fund_repository.dart';
 import '../../../core/exceptions/app_exceptions.dart';
 
 class FundDataException extends AppException {
-  final String code;
-  FundDataException(this.code) : super('获取基金详情失败: $code', code: code);
+  FundDataException(String code) : super('获取基金详情失败: $code', code: code);
 }
 
 class GetFundDetailUseCase {

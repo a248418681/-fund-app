@@ -207,7 +207,7 @@ class _FundDetailPageState extends State<FundDetailPage>
     final dayIsUp = dayChg >= 0;
     final dayIsFlat = dayChg == 0;
 
-    Widget _chgText(double v, bool up, bool flat, {double size = 22}) {
+    Widget chgText(double v, bool up, bool flat, {double size = 22}) {
       return Text(
         '${flat ? '' : (up ? '+' : '')}${v.toStringAsFixed(2)}%',
         style: TextStyle(
@@ -238,7 +238,7 @@ class _FundDetailPageState extends State<FundDetailPage>
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  _chgText(estChg, estIsUp, estIsFlat),
+                  chgText(estChg, estIsUp, estIsFlat),
                   const SizedBox(width: 4),
                   const Padding(
                     padding: EdgeInsets.only(bottom: 3),
@@ -251,7 +251,7 @@ class _FundDetailPageState extends State<FundDetailPage>
               Row(
                 children: [
                   const Text('昨日 ', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
-                  _chgText(dayChg, dayIsUp, dayIsFlat, size: 12),
+                  chgText(dayChg, dayIsUp, dayIsFlat, size: 12),
                 ],
               ),
             ],
@@ -384,7 +384,7 @@ class _FundDetailPageState extends State<FundDetailPage>
                         color: (isFlat
                             ? AppTheme.textSecondary
                             : (isUp ? AppTheme.upColor : AppTheme.downColor))
-                            .withOpacity(0.1),
+                            .withValues(alpha: 0.1),
                       ),
                     ),
                   ],
@@ -418,9 +418,9 @@ class _FundDetailPageState extends State<FundDetailPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              const Text(
+              Text(
                 '行业分布',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
               ),
@@ -638,7 +638,7 @@ class _FundDetailPageState extends State<FundDetailPage>
                           show: true,
                           drawVerticalLine: false,
                           horizontalInterval: _getNavInterval(navHistory),
-                          getDrawingHorizontalLine: (value) => FlLine(
+                          getDrawingHorizontalLine: (value) => const FlLine(
                             color: AppTheme.borderColor,
                             strokeWidth: 0.5,
                           ),
@@ -701,7 +701,7 @@ class _FundDetailPageState extends State<FundDetailPage>
                             dotData: const FlDotData(show: false),
                             belowBarData: BarAreaData(
                               show: true,
-                              color: AppTheme.primary.withOpacity(0.1),
+                              color: AppTheme.primary.withValues(alpha: 0.1),
                             ),
                           ),
                         ],
@@ -722,7 +722,7 @@ class _FundDetailPageState extends State<FundDetailPage>
   // 净值走势期限选择器（横向可滚动）
   Widget _buildNavPeriodSelector(DetailState state) {
     final selected = state.selectedNavPeriod;
-    final periods = NavPeriod.values;
+    const periods = NavPeriod.values;
     
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,

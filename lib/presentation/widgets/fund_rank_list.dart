@@ -22,7 +22,7 @@ class FundRankList extends StatelessWidget {
           onTap: () => onTap?.call(item.code),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppTheme.bgSecondary,
               border: Border(bottom: BorderSide(color: AppTheme.borderLight)),
             ),

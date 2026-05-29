@@ -9,17 +9,17 @@ class AppException implements Exception {
 }
 
 class NetworkException extends AppException {
-  NetworkException([String message = '网络请求失败']) : super(message);
+  NetworkException([super.message = '网络请求失败']);
 }
 
 class CacheException extends AppException {
-  CacheException([String message = '缓存读取失败']) : super(message);
+  CacheException([super.message = '缓存读取失败']);
 }
 
 class ParseException extends AppException {
-  ParseException([String message = '数据解析失败']) : super(message);
+  ParseException([super.message = '数据解析失败']);
 }
 
 class NotFoundException extends AppException {
-  NotFoundException([String message = '数据不存在']) : super(message);
+  NotFoundException([super.message = '数据不存在']);
 }

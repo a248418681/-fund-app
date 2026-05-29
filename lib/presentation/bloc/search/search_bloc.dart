@@ -1,13 +1,16 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../domain/entities/fund_entity.dart';
 import '../../../domain/repositories/fund_repository.dart';
+import '../../../utils/error_util.dart';
 import 'search_event.dart';
 import 'search_state.dart';
 
 class SearchBloc extends Bloc<SearchEvent, SearchState> {
   final FundRepository _repository;
   int _requestId = 0;
+  CancelToken? _cancelToken;
 
   SearchBloc(this._repository) : super(const SearchState()) {
     on<SearchQueryChanged>(_onQueryChanged);
@@ -32,7 +35,12 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       return;
     }
 
+    // 取消上一次飞行中的请求
+    _cancelToken?.cancel();
+    _cancelToken = CancelToken();
+
     final myId = ++_requestId;
+    final myCancelToken = _cancelToken;
     emit(state.copyWith(status: SearchStatus.loading, query: query));
 
     // 防抖 300ms
@@ -40,7 +48,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     if (myId != _requestId) return;
 
     try {
-      final results = await _repository.searchFund(query);
+      final results = await _repository.searchFund(query, cancelToken: myCancelToken);
       if (myId != _requestId) return;
 
       // 缓存热门基金
@@ -51,11 +59,18 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         results: results,
         hotFunds: hotFunds,
       ));
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return; // 主动取消，不报错
+      if (myId != _requestId) return;
+      emit(state.copyWith(
+        status: SearchStatus.error,
+        errorMessage: '搜索失败，请检查网络',
+      ));
     } catch (e) {
       if (myId != _requestId) return;
       emit(state.copyWith(
         status: SearchStatus.error,
-        errorMessage: e.toString(),
+        errorMessage: ErrorUtil.format(e),
       ));
     }
   }
@@ -94,6 +109,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
   @override
   Future<void> close() {
     _requestId = 0;
+    _cancelToken?.cancel();
     return super.close();
   }
 }

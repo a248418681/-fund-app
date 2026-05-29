@@ -42,7 +42,7 @@ class NavChartWidget extends StatelessWidget {
           show: true,
           drawVerticalLine: false,
           horizontalInterval: range / 4,
-          getDrawingHorizontalLine: (value) => FlLine(
+          getDrawingHorizontalLine: (value) => const FlLine(
             color: AppTheme.borderLight,
             strokeWidth: 0.5,
           ),

@@ -153,9 +153,11 @@ class FundLocalDataSource {
         codeList.addAll(['005827', '110022', '012348', '001548', '320007', '016874']);
       }
     }
+    // 名称优先级：持久化名 > demo 名 > code
+    final p2 = await prefs;
     return codeList.map((code) => FundInfo(
       code: code,
-      name: _demoFundNames[code] ?? code,
+      name: p2.getString('fund_name_$code') ?? _demoFundNames[code] ?? code,
       type: '',
       pinyin: '',
     )).toList();

@@ -24,8 +24,9 @@ Future<void> setupDependencies() async {
     },
   ));
   
-  // 修复 MIME type 解析问题：使用 BackgroundTransformer 不做 content-type 检查
-  dio.transformer = BackgroundTransformer();
+  // 修复 MIME type 解析问题：GZ API 返回奇葩 Content-Type "application/javascript; charset=UTF-8,gbk"
+  // 自定义 Transformer 在解析前修正 Content-Type
+  dio.transformer = _GzFixTransformer();
   
   getIt.registerSingleton<Dio>(dio);
 
@@ -48,5 +49,30 @@ Future<void> setupDependencies() async {
   getIt.registerLazySingleton<MarketBloc>(() => MarketBloc(getIt<FundRepository>()));
   getIt.registerLazySingleton<SearchBloc>(() => SearchBloc(getIt<FundRepository>()));
   getIt.registerFactory<TradeBloc>(() => TradeBloc(getIt<FundRepository>()));
+}
+
+/// 自定义 Transformer：修正 GZ API 返回的非法 Content-Type
+/// fundgz.1234567.com.cn 返回 "application/javascript; charset=UTF-8,gbk"
+/// 双 charset 导致 Dio 的 MediaType.parse 报警告
+/// 在 transformResponse 前修正为合法格式，消除日志噪音
+class _GzFixTransformer extends SyncTransformer {
+  @override
+  Future<dynamic> transformResponse(
+    RequestOptions options,
+    ResponseBody responseBody,
+  ) async {
+    // 修正非法 Content-Type（GZ API 双 charset: "charset=UTF-8,gbk"）
+    final contentTypeHeader = responseBody.headers[Headers.contentTypeHeader];
+    if (contentTypeHeader != null && contentTypeHeader.isNotEmpty) {
+      for (int i = 0; i < contentTypeHeader.length; i++) {
+        if (contentTypeHeader[i].contains('charset=UTF-8,gbk')) {
+          contentTypeHeader[i] = contentTypeHeader[i].replaceFirst(
+            'charset=UTF-8,gbk', 'charset=UTF-8',
+          );
+        }
+      }
+    }
+    return super.transformResponse(options, responseBody);
+  }
 }
 

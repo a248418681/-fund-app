@@ -71,7 +71,7 @@ class AppTheme {
         indicatorColor: primary.withValues(alpha: 0.12),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: primary);
+            return const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: primary);
           }
           return TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: textSec);
         }),
@@ -85,7 +85,7 @@ class AppTheme {
         bodyLarge: TextStyle(fontSize: 16, color: text),
         bodyMedium: TextStyle(fontSize: 14, color: text),
         bodySmall: TextStyle(fontSize: 12, color: textSec),
-        labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        labelLarge: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       ),
     );
   }

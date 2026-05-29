@@ -9,19 +9,18 @@ class MarketLoad extends MarketEvent {}
 
 class MarketRefresh extends MarketEvent {}
 
-class MarketChangeSort extends MarketEvent {
-  final String sortType;
-  final String order;
-  MarketChangeSort(this.sortType, this.order);
+class MarketChangeTab extends MarketEvent {
+  final int tabIndex; // 0=涨幅榜, 1=跌幅榜
+  MarketChangeTab(this.tabIndex);
   @override
-  List<Object?> get props => [sortType, order];
+  List<Object?> get props => [tabIndex];
 }
 
-class MarketChangeFundType extends MarketEvent {
-  final String fundType;
-  MarketChangeFundType(this.fundType);
+class MarketChangeSort extends MarketEvent {
+  final String sortType; // r=日, zzf=周, 1yzf=月, 3yzf=三月, 6yzf=半年, 1nzf=年
+  MarketChangeSort(this.sortType);
   @override
-  List<Object?> get props => [fundType];
+  List<Object?> get props => [sortType];
 }
 
 class MarketLoadSectors extends MarketEvent {}

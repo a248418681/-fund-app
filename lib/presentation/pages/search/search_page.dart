@@ -232,6 +232,8 @@ class _SearchPageState extends State<SearchPage> {
       // 获取失败使用默认 1.0
     }
 
+    if (!mounted) return;
+
     final amountCtrl = TextEditingController(text: '1000');
     final navCtrl = TextEditingController(text: defaultNav.toStringAsFixed(4));
 
@@ -280,8 +282,8 @@ class _SearchPageState extends State<SearchPage> {
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               style: const TextStyle(color: AppTheme.textPrimary),
               decoration: InputDecoration(
-                labelText: '买入净值(可选)',
-                hintText: '留空则默认为1.0',
+                labelText: '买入净值',
+                hintText: defaultNav > 1.0 ? '已获取最新净值' : '请输入买入净值',
                 labelStyle: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.8)),
                 filled: true,
                 fillColor: AppTheme.bgCard,

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import '../datasources/remote/fund_remote_datasource.dart';
 import '../datasources/local/fund_local_datasource.dart';
 import '../../domain/entities/fund_entity.dart';
@@ -25,8 +26,8 @@ class FundRepositoryImpl implements FundRepository {
   }
 
   @override
-  Future<List<FundInfo>> searchFund(String keyword, {int limit = 50}) async {
-    return await _remote.searchFund(keyword, limit: limit);
+  Future<List<FundInfo>> searchFund(String keyword, {int limit = 50, CancelToken? cancelToken}) async {
+    return await _remote.searchFund(keyword, limit: limit, cancelToken: cancelToken);
   }
 
   @override
