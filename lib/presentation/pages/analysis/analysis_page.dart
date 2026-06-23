@@ -35,72 +35,74 @@ class AnalysisPage extends StatelessWidget {
           context.read<HoldingsBloc>().add(HoldingsRefresh());
         },
         child: BlocBuilder<HoldingsBloc, HoldingsState>(
-        builder: (ctx, state) {
-          if (state.status == HoldingsStatus.loading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          builder: (ctx, state) {
+            if (state.status == HoldingsStatus.loading) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (state.holdings.isEmpty) {
-            return _buildEmpty();
-          }
+            if (state.holdings.isEmpty) {
+              return _buildEmpty();
+            }
 
-          final summary = state.summary;
-          final holdings = state.holdings;
+            final summary = state.summary;
+            final holdings = state.holdings;
 
-          // 按收益率排序
-          final sortedByProfit = List.of(holdings)
-            ..sort((a, b) {
-              final pa = _parseProfitRate(a.profitRate);
-              final pb = _parseProfitRate(b.profitRate);
-              return pb.compareTo(pa);
-            });
+            // 按收益率排序
+            final sortedByProfit = List.of(holdings)
+              ..sort((a, b) {
+                final pa = _parseProfitRate(a.profitRate);
+                final pb = _parseProfitRate(b.profitRate);
+                return pb.compareTo(pa);
+              });
 
-          // 按金额排序
-          final sortedByAmount = List.of(holdings)
-            ..sort((a, b) => b.marketValue.compareTo(a.marketValue));
+            // 按金额排序
+            final sortedByAmount = List.of(holdings)
+              ..sort((a, b) => b.marketValue.compareTo(a.marketValue));
 
-          // 按类型分组
-          final typeMap = <String, double>{};
-          for (final h in holdings) {
-            final type = h.fundType ?? '混合型';
-            typeMap[type] = (typeMap[type] ?? 0) + h.marketValue;
-          }
-          final sortedTypes = typeMap.entries.toList()
-            ..sort((a, b) => b.value.compareTo(a.value));
+            // 按类型分组
+            final typeMap = <String, double>{};
+            for (final h in holdings) {
+              final type = h.fundType ?? '混合型';
+              typeMap[type] = (typeMap[type] ?? 0) + h.marketValue;
+            }
+            final sortedTypes = typeMap.entries.toList()
+              ..sort((a, b) => b.value.compareTo(a.value));
 
-          final upCount = holdings.where((h) => _parseProfitRate(h.profitRate) >= 0).length;
+            final upCount = holdings
+                .where((h) => _parseProfitRate(h.profitRate) >= 0)
+                .length;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 总览卡片
-                _buildOverviewCard(summary, upCount, holdings.length),
-                const SizedBox(height: 20),
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 总览卡片
+                  _buildOverviewCard(summary, upCount, holdings.length),
+                  const SizedBox(height: 20),
 
-                // 收益率排行
-                _buildSectionTitle('收益排行'),
-                const SizedBox(height: 10),
-                _buildProfitLeaderboard(sortedByProfit.take(5).toList()),
-                const SizedBox(height: 20),
+                  // 收益率排行
+                  _buildSectionTitle('收益排行'),
+                  const SizedBox(height: 10),
+                  _buildProfitLeaderboard(sortedByProfit.take(5).toList()),
+                  const SizedBox(height: 20),
 
-                // 持仓分布
-                _buildSectionTitle('持仓分布'),
-                const SizedBox(height: 10),
-                _buildTypeDistribution(sortedTypes),
-                const SizedBox(height: 20),
+                  // 持仓分布
+                  _buildSectionTitle('持仓分布'),
+                  const SizedBox(height: 10),
+                  _buildTypeDistribution(sortedTypes),
+                  const SizedBox(height: 20),
 
-                // 持仓明细（按金额排序）
-                _buildSectionTitle('持仓明细（按金额）'),
-                const SizedBox(height: 10),
-                _buildHoldingsDetail(sortedByAmount, holdings),
-                const SizedBox(height: 80),
-              ],
-            ),
-          );
-        },
-      ),
+                  // 持仓明细（按金额排序）
+                  _buildSectionTitle('持仓明细（按金额）'),
+                  const SizedBox(height: 10),
+                  _buildHoldingsDetail(sortedByAmount, holdings),
+                  const SizedBox(height: 80),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -110,11 +112,15 @@ class AnalysisPage extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.analytics_outlined, size: 64, color: AppTheme.textSecondary.withValues(alpha: 0.3)),
+          Icon(Icons.analytics_outlined,
+              size: 64, color: AppTheme.textSecondary.withValues(alpha: 0.3)),
           const SizedBox(height: 16),
-          const Text('暂无持仓数据', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('暂无持仓数据',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text('添加基金后查看收益分析', style: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.6))),
+          Text('添加基金后查看收益分析',
+              style: TextStyle(
+                  color: AppTheme.textSecondary.withValues(alpha: 0.6))),
         ],
       ),
     );
@@ -134,14 +140,19 @@ class AnalysisPage extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: (isUp ? AppTheme.upColor : AppTheme.downColor).withValues(alpha: 0.3),
-            blurRadius: 12, offset: const Offset(0, 4)),
+          BoxShadow(
+              color: (isUp ? AppTheme.upColor : AppTheme.downColor)
+                  .withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('持仓总览', style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.8))),
+          Text('持仓总览',
+              style: TextStyle(
+                  fontSize: 14, color: Colors.white.withValues(alpha: 0.8))),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -149,11 +160,17 @@ class AnalysisPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('总收益', style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.7))),
+                    Text('总收益',
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white.withValues(alpha: 0.7))),
                     const SizedBox(height: 4),
                     Text(
                       '${isUp ? '+' : ''}¥${s.totalProfit.toStringAsFixed(2)}',
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white),
                     ),
                   ],
                 ),
@@ -162,11 +179,17 @@ class AnalysisPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('收益率', style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.7))),
+                    Text('收益率',
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white.withValues(alpha: 0.7))),
                     const SizedBox(height: 4),
                     Text(
                       '${(s.totalProfitRate * 100).toStringAsFixed(2)}%',
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white),
                     ),
                   ],
                 ),
@@ -176,11 +199,14 @@ class AnalysisPage extends StatelessWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              _statPill('总市值', '¥${s.totalValue.toStringAsFixed(0)}', Colors.white.withValues(alpha: 0.2)),
+              _statPill('总市值', '¥${s.totalValue.toStringAsFixed(0)}',
+                  Colors.white.withValues(alpha: 0.2)),
               const SizedBox(width: 8),
-              _statPill('总成本', '¥${s.totalCost.toStringAsFixed(0)}', Colors.white.withValues(alpha: 0.2)),
+              _statPill('总成本', '¥${s.totalCost.toStringAsFixed(0)}',
+                  Colors.white.withValues(alpha: 0.2)),
               const SizedBox(width: 8),
-              _statPill('盈利', '$upCount/$totalCount只', Colors.white.withValues(alpha: 0.2)),
+              _statPill('盈利', '$upCount/$totalCount只',
+                  Colors.white.withValues(alpha: 0.2)),
             ],
           ),
         ],
@@ -191,18 +217,29 @@ class AnalysisPage extends StatelessWidget {
   Widget _statPill(String label, String value, Color bg) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
+      decoration:
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
       child: Column(
         children: [
-          Text(label, style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
-          Text(value, style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600)),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
+          Text(value,
+              style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600)),
         ],
       ),
     );
   }
 
   Widget _buildSectionTitle(String title) {
-    return Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary));
+    return Text(title,
+        style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textPrimary));
   }
 
   Widget _buildProfitLeaderboard(List holdings) {
@@ -212,7 +249,9 @@ class AnalysisPage extends StatelessWidget {
         final h = e.value;
         final rate = _parseProfitRate(h.profitRate);
         final isUp = rate >= 0;
-        final color = idx == 0 ? Colors.amber : (isUp ? AppTheme.upColor : AppTheme.downColor);
+        final color = idx == 0
+            ? Colors.amber
+            : (isUp ? AppTheme.upColor : AppTheme.downColor);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
@@ -220,20 +259,28 @@ class AnalysisPage extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppTheme.bgSecondary,
             borderRadius: BorderRadius.circular(10),
-            border: idx == 0 ? Border.all(color: Colors.amber.withValues(alpha: 0.3), width: 1) : null,
+            border: idx == 0
+                ? Border.all(
+                    color: Colors.amber.withValues(alpha: 0.3), width: 1)
+                : null,
           ),
           child: Row(
             children: [
               Container(
-                width: 24, height: 24,
+                width: 24,
+                height: 24,
                 decoration: BoxDecoration(
-                  color: idx < 3 ? Colors.amber.withValues(alpha: 0.1) : AppTheme.bgPrimary,
+                  color: idx < 3
+                      ? Colors.amber.withValues(alpha: 0.1)
+                      : AppTheme.bgPrimary,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
                   child: Text('${idx + 1}',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold,
-                      color: idx < 3 ? Colors.amber : AppTheme.textMuted)),
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: idx < 3 ? Colors.amber : AppTheme.textMuted)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -241,9 +288,15 @@ class AnalysisPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(h.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                      overflow: TextOverflow.ellipsis),
-                    Text(h.code, style: TextStyle(fontSize: 11, color: AppTheme.textSecondary.withValues(alpha: 0.7))),
+                    Text(h.name,
+                        style: const TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis),
+                    Text(h.code,
+                        style: TextStyle(
+                            fontSize: 11,
+                            color:
+                                AppTheme.textSecondary.withValues(alpha: 0.7))),
                   ],
                 ),
               ),
@@ -252,11 +305,15 @@ class AnalysisPage extends StatelessWidget {
                 children: [
                   Text(
                     '${isUp ? '+' : ''}${rate.toStringAsFixed(2)}%',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color),
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: color),
                   ),
                   Text(
                     '${isUp ? '+' : ''}¥${h.profit.toStringAsFixed(2)}',
-                    style: TextStyle(fontSize: 11, color: color.withValues(alpha: 0.8)),
+                    style: TextStyle(
+                        fontSize: 11, color: color.withValues(alpha: 0.8)),
                   ),
                 ],
               ),
@@ -271,7 +328,14 @@ class AnalysisPage extends StatelessWidget {
     final total = types.fold<double>(0, (sum, e) => sum + e.value);
     if (total == 0) return const SizedBox.shrink();
 
-    final colors = [AppTheme.primary, AppTheme.upColor, Colors.orange, Colors.purple, Colors.teal, Colors.grey];
+    final colors = [
+      AppTheme.primary,
+      AppTheme.upColor,
+      Colors.orange,
+      Colors.purple,
+      Colors.teal,
+      Colors.grey
+    ];
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -306,20 +370,27 @@ class AnalysisPage extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    width: 12, height: 12,
+                    width: 12,
+                    height: 12,
                     decoration: BoxDecoration(
                       color: colors[e.key % colors.length],
                       borderRadius: BorderRadius.circular(3),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(e.value.key, style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary)),
+                  Text(e.value.key,
+                      style: const TextStyle(
+                          fontSize: 13, color: AppTheme.textPrimary)),
                   const Spacer(),
                   Text('¥${e.value.value.toStringAsFixed(0)}',
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600)),
                   const SizedBox(width: 8),
                   Text('${(ratio * 100).toStringAsFixed(1)}%',
-                    style: TextStyle(fontSize: 12, color: AppTheme.textSecondary.withValues(alpha: 0.7))),
+                      style: TextStyle(
+                          fontSize: 12,
+                          color:
+                              AppTheme.textSecondary.withValues(alpha: 0.7))),
                 ],
               ),
             );
@@ -352,10 +423,16 @@ class AnalysisPage extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(h.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                          overflow: TextOverflow.ellipsis),
-                        Text('${h.code} · ${(ratio * 100).toStringAsFixed(1)}% 仓位',
-                          style: TextStyle(fontSize: 11, color: AppTheme.textSecondary.withValues(alpha: 0.7))),
+                        Text(h.name,
+                            style: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis),
+                        Text(
+                            '${h.code} · ${(ratio * 100).toStringAsFixed(1)}% 仓位',
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.textSecondary
+                                    .withValues(alpha: 0.7))),
                       ],
                     ),
                   ),
@@ -363,9 +440,14 @@ class AnalysisPage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text('¥${h.marketValue.toStringAsFixed(2)}',
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600)),
                       Text('${isUp ? '+' : ''}¥${h.profit.toStringAsFixed(2)}',
-                        style: TextStyle(fontSize: 12, color: isUp ? AppTheme.upColor : AppTheme.downColor)),
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: isUp
+                                  ? AppTheme.upColor
+                                  : AppTheme.downColor)),
                     ],
                   ),
                 ],
@@ -377,7 +459,9 @@ class AnalysisPage extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: ratio.clamp(0.0, 1.0),
                   backgroundColor: AppTheme.bgPrimary,
-                  valueColor: AlwaysStoppedAnimation(isUp ? AppTheme.upColor.withValues(alpha: 0.7) : AppTheme.downColor.withValues(alpha: 0.7)),
+                  valueColor: AlwaysStoppedAnimation(isUp
+                      ? AppTheme.upColor.withValues(alpha: 0.7)
+                      : AppTheme.downColor.withValues(alpha: 0.7)),
                   minHeight: 4,
                 ),
               ),

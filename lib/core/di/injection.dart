@@ -20,14 +20,15 @@ Future<void> setupDependencies() async {
     connectTimeout: const Duration(seconds: 30),
     receiveTimeout: const Duration(seconds: 30),
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
     },
   ));
-  
+
   // 修复 MIME type 解析问题：GZ API 返回奇葩 Content-Type "application/javascript; charset=UTF-8,gbk"
   // 自定义 Transformer 在解析前修正 Content-Type
   dio.transformer = _GzFixTransformer();
-  
+
   getIt.registerSingleton<Dio>(dio);
 
   // Data Sources - LazySingleton 以保留内存缓存(gzCache/pzCache/djCache)
@@ -38,16 +39,22 @@ Future<void> setupDependencies() async {
 
   // Repository - LazySingleton 共享数据源实例
   getIt.registerLazySingleton<FundRepository>(
-    () => FundRepositoryImpl(getIt<FundRemoteDataSource>(), getIt<FundLocalDataSource>()),
+    () => FundRepositoryImpl(
+        getIt<FundRemoteDataSource>(), getIt<FundLocalDataSource>()),
   );
 
   // BLoCs - DetailBloc 每次(Factory)，其他共享状态用 lazySingleton
-  getIt.registerLazySingleton<HomeBloc>(() => HomeBloc(getIt<FundRepository>()));
-  getIt.registerLazySingleton<HoldingsBloc>(() => HoldingsBloc(getIt<FundRepository>()));
+  getIt
+      .registerLazySingleton<HomeBloc>(() => HomeBloc(getIt<FundRepository>()));
+  getIt.registerLazySingleton<HoldingsBloc>(
+      () => HoldingsBloc(getIt<FundRepository>()));
   getIt.registerFactory<DetailBloc>(() => DetailBloc(getIt<FundRepository>()));
-  getIt.registerFactory<SectorDetailBloc>(() => SectorDetailBloc(getIt<FundRepository>()));
-  getIt.registerLazySingleton<MarketBloc>(() => MarketBloc(getIt<FundRepository>()));
-  getIt.registerLazySingleton<SearchBloc>(() => SearchBloc(getIt<FundRepository>()));
+  getIt.registerFactory<SectorDetailBloc>(
+      () => SectorDetailBloc(getIt<FundRepository>()));
+  getIt.registerLazySingleton<MarketBloc>(
+      () => MarketBloc(getIt<FundRepository>()));
+  getIt.registerLazySingleton<SearchBloc>(
+      () => SearchBloc(getIt<FundRepository>()));
   getIt.registerFactory<TradeBloc>(() => TradeBloc(getIt<FundRepository>()));
 }
 
@@ -67,7 +74,8 @@ class _GzFixTransformer extends SyncTransformer {
       for (int i = 0; i < contentTypeHeader.length; i++) {
         if (contentTypeHeader[i].contains('charset=UTF-8,gbk')) {
           contentTypeHeader[i] = contentTypeHeader[i].replaceFirst(
-            'charset=UTF-8,gbk', 'charset=UTF-8',
+            'charset=UTF-8,gbk',
+            'charset=UTF-8',
           );
         }
       }
@@ -75,4 +83,3 @@ class _GzFixTransformer extends SyncTransformer {
     return super.transformResponse(options, responseBody);
   }
 }
-

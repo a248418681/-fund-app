@@ -61,15 +61,18 @@ class _WatchlistPageState extends State<WatchlistPage> {
             children: [
               if (state.lastRefreshTime.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   color: AppTheme.bgSecondary,
                   child: Row(
                     children: [
-                      const Icon(Icons.access_time, size: 14, color: AppTheme.textMuted),
+                      const Icon(Icons.access_time,
+                          size: 14, color: AppTheme.textMuted),
                       const SizedBox(width: 4),
                       Text(
                         '更新于 ${state.lastRefreshTime}',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                        style: const TextStyle(
+                            fontSize: 12, color: AppTheme.textMuted),
                       ),
                       const Spacer(),
                       if (state.isRefreshing)
@@ -85,12 +88,15 @@ class _WatchlistPageState extends State<WatchlistPage> {
               _buildWatchlistHeader(state),
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: () async => context.read<HomeBloc>().add(HomeRefresh()),
+                  onRefresh: () async =>
+                      context.read<HomeBloc>().add(HomeRefresh()),
                   child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     itemCount: state.sortedWatchlist.length,
                     itemBuilder: (context, index) {
-                      return _buildWatchlistItem(context, state.sortedWatchlist[index]);
+                      return _buildWatchlistItem(
+                          context, state.sortedWatchlist[index]);
                     },
                   ),
                 ),
@@ -186,9 +192,11 @@ class _WatchlistPageState extends State<WatchlistPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                _buildSortHeader('估算净值', 80, WatchlistSortField.estimateValue, state),
+                _buildSortHeader(
+                    '估算净值', 80, WatchlistSortField.estimateValue, state),
                 const SizedBox(width: 16),
-                _buildSortHeader(changeLabel, 72, WatchlistSortField.estimateChange, state),
+                _buildSortHeader(
+                    changeLabel, 72, WatchlistSortField.estimateChange, state),
               ],
             ),
           ),
@@ -197,7 +205,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
     );
   }
 
-  Widget _buildSortHeader(String label, double width, WatchlistSortField field, HomeState state) {
+  Widget _buildSortHeader(
+      String label, double width, WatchlistSortField field, HomeState state) {
     final isActive = state.sortField == field;
     return GestureDetector(
       onTap: () => context.read<HomeBloc>().add(HomeChangeWatchlistSort(field)),
@@ -265,7 +274,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: item.dataSource == 'nav'
                                 ? Colors.blue.withValues(alpha: 0.1)
@@ -276,7 +286,9 @@ class _WatchlistPageState extends State<WatchlistPage> {
                             item.dataSource == 'nav' ? '净值' : '估值',
                             style: TextStyle(
                               fontSize: 10,
-                              color: item.dataSource == 'nav' ? Colors.blue : Colors.orange,
+                              color: item.dataSource == 'nav'
+                                  ? Colors.blue
+                                  : Colors.orange,
                             ),
                           ),
                         ),
@@ -285,13 +297,15 @@ class _WatchlistPageState extends State<WatchlistPage> {
                     const SizedBox(height: 4),
                     Text(
                       item.code,
-                      style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                      style: const TextStyle(
+                          fontSize: 12, color: AppTheme.textMuted),
                     ),
                     if (item.estimateTime?.isNotEmpty ?? false) ...[
                       const SizedBox(height: 2),
                       Text(
                         item.estimateTime ?? '',
-                        style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                        style: const TextStyle(
+                            fontSize: 11, color: AppTheme.textMuted),
                       ),
                     ],
                   ],

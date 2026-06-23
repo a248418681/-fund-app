@@ -21,7 +21,8 @@ class DetailState extends Equatable {
   });
 
   @override
-  List<Object?> get props => [fund, estimate, navHistory, isLoading, isRefreshing, error];
+  List<Object?> get props =>
+      [fund, estimate, navHistory, isLoading, isRefreshing, error];
 
   DetailState copyWith({
     FundInfo? fund,

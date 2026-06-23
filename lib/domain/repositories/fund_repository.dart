@@ -12,10 +12,12 @@ abstract class FundRepository {
   Future<List<FundInfo>> fetchFundList();
 
   /// 搜索基金
-  Future<List<FundInfo>> searchFund(String keyword, {int limit = 50, CancelToken? cancelToken});
+  Future<List<FundInfo>> searchFund(String keyword,
+      {int limit = 50, CancelToken? cancelToken});
 
   /// 获取历史净值
-  Future<List<NetValueRecord>> fetchNetValueHistory(String code, {int days = 30});
+  Future<List<NetValueRecord>> fetchNetValueHistory(String code,
+      {int days = 30});
 
   /// 获取大盘指数
   Future<List<MarketIndex>> fetchMarketIndices();
@@ -53,19 +55,29 @@ abstract class FundRepository {
   Future<List<StockHolding>> fetchStockHoldingsWithInfo(String code);
 
   /// 获取财经新闻
-  Future<List<NewsItem>> fetchFinanceNews({int pageSize = 10, String category = '102'});
+  Future<List<NewsItem>> fetchFinanceNews(
+      {int pageSize = 10, String category = '102'});
 
   /// 获取热门板块排行
   Future<List<SectorRankItem>> fetchSectorRanking({int pageSize = 10});
 
   /// 获取板块成分股/基列表
-  Future<List<SectorConstituentItem>> fetchSectorConstituents(String sectorCode, {int pageSize = 50});
+  Future<List<SectorConstituentItem>> fetchSectorConstituents(String sectorCode,
+      {int pageSize = 50});
 
   /// 获取关联板块信息（根据基金名称识别板块 + 市场行情）
-  Future<SectorInfo?> fetchSectorInfo(String fundName, String fundType, String fundCode);
+  Future<SectorInfo?> fetchSectorInfo(
+      String fundName, String fundType, String fundCode);
 
-  /// 获取板块关联基金
-  Future<List<SectorFundItem>> fetchSectorFunds(String sectorName, {int pageSize = 20});
+  /// 获取板块关联基金（关键词搜索 + 估值）
+  Future<List<SectorFundItem>> fetchSectorFunds(String sectorName,
+      {int pageSize = 20});
+
+  /// 通过数据库持仓明细获取板块关联基金（概念→股票→基金持仓→聚合）
+  /// 比关键词搜索更精准，基于实际持仓数据
+  Future<List<SectorFundItem>> fetchSectorFundsByHoldings(
+      String sectorCode, String sectorName,
+      {int pageSize = 30});
 
   /// 持仓相关
   Future<List<HoldingRecord>> getHoldings();

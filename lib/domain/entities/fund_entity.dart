@@ -206,10 +206,10 @@ class StockHolding {
   final String changeFromLast;
 
   // 蛋卷 API 扩展字段
-  final double? currentPrice;     // 实时股价
-  final double? changePercent;    // 今日涨跌幅 %
-  final String? industryLabel;    // 行业标签（如 "食品饮料"）
-  final bool isAMarket;           // 是否 A 股
+  final double? currentPrice; // 实时股价
+  final double? changePercent; // 今日涨跌幅 %
+  final String? industryLabel; // 行业标签（如 "食品饮料"）
+  final bool isAMarket; // 是否 A 股
   final String? changeOfPreQuarter; // 较上期持仓变动
 
   StockHolding({
@@ -511,8 +511,8 @@ class AssetAllocation {
 
 /// 关联板块信息
 class SectorInfo {
-  final String code;   // 板块代码
-  final String name;   // 板块名称
+  final String code; // 板块代码
+  final String name; // 板块名称
   final double dayReturn; // 今日涨跌幅
   final String streak; // 连涨/描述
 
@@ -551,9 +551,9 @@ class NewsItem {
 
 /// 板块排行项
 class SectorRankItem {
-  final String code;   // 板块代码 (如 BK1395)
-  final String name;   // 板块名称
-  final double price;  // 当前点位/价格
+  final String code; // 板块代码 (如 BK1395)
+  final String name; // 板块名称
+  final double price; // 当前点位/价格
   final double changePercent; // 涨跌幅 %
   final double change; // 涨跌额
 
@@ -568,9 +568,9 @@ class SectorRankItem {
 
 /// 板块成分股/基（板块详情页使用）
 class SectorConstituentItem {
-  final String code;   // 股票/基金代码
-  final String name;   // 名称
-  final double price;  // 当前价
+  final String code; // 股票/基金代码
+  final String name; // 名称
+  final double price; // 当前价
   final double changePercent; // 涨跌幅 %
   final double change; // 涨跌额
   final double? marketCap; // 总市值（亿）
@@ -651,14 +651,16 @@ class HoldingWithProfit extends HoldingRecord {
 
 /// 板块关联基金项（板块详情页用）
 class SectorFundItem {
-  final String code;            // 基金代码
-  final String name;           // 基金名称
-  final String type;           // 基金类型（如 指数型-股票）
-  final String fundCompany;    // 基金公司
-  final double netValue;       // 单位净值
+  final String code; // 基金代码
+  final String name; // 基金名称
+  final String type; // 基金类型（如 指数型-股票）
+  final String fundCompany; // 基金公司
+  final double netValue; // 单位净值
   final double estimateChange; // 估算涨跌幅(%)
-  final String estimateTime;   // 估值时间
-  final bool hasEstimate;      // 是否有有效估值数据
+  final String estimateTime; // 估值时间
+  final bool hasEstimate; // 是否有有效估值数据
+  final double holdingMarketCap; // 该基金在本板块的持仓总市值（元）
+  final int stockCount; // 持有本板块的股票数量
 
   const SectorFundItem({
     required this.code,
@@ -669,5 +671,7 @@ class SectorFundItem {
     this.estimateChange = 0,
     this.estimateTime = '',
     this.hasEstimate = false,
+    this.holdingMarketCap = 0,
+    this.stockCount = 0,
   });
 }

@@ -31,16 +31,21 @@ class RecognizedHolding {
   });
 
   RecognizedHolding copyWith({
-    String? code, String? name, double? amount,
+    String? code,
+    String? name,
+    double? amount,
     double? shares,
     double? yesterdayProfit,
     double? holdingProfit,
     double? holdingProfitRate,
-    double? confidence, bool? needsCodeMatch,
+    double? confidence,
+    bool? needsCodeMatch,
   }) {
     return RecognizedHolding(
-      code: code ?? this.code, name: name ?? this.name,
-      amount: amount ?? this.amount, shares: shares ?? this.shares,
+      code: code ?? this.code,
+      name: name ?? this.name,
+      amount: amount ?? this.amount,
+      shares: shares ?? this.shares,
       yesterdayProfit: yesterdayProfit ?? this.yesterdayProfit,
       holdingProfit: holdingProfit ?? this.holdingProfit,
       holdingProfitRate: holdingProfitRate ?? this.holdingProfitRate,
@@ -52,9 +57,9 @@ class RecognizedHolding {
 
 /// V8-4.5 推迟的不完整名记录
 class _DeferredName {
-  final String name;      // 不完整基金名（如"嘉实新能源新材料"）
-  final double amount;    // 已提取的金额
-  final int anchorIdx;   // 原锚点行索引
+  final String name; // 不完整基金名（如"嘉实新能源新材料"）
+  final double amount; // 已提取的金额
+  final int anchorIdx; // 原锚点行索引
   final int? dataLineIdx; // 原数据行索引
   _DeferredName(this.name, this.amount, this.anchorIdx, this.dataLineIdx);
 }
@@ -69,26 +74,48 @@ class OcrService {
   // 噪声关键词 — ⚠️ 只放纯广告/文案碎片，不放任何基金后缀/类别词
   // 后缀词（合C/混合C/指数C等）是 OCR 真实输出，放这里会导致数据静默丢失
   static const List<String> _noiseKeywords = [
-    '金选指数基金', '市场解读', '去买入', '更多产品', '基金经理说',
-    '能源替代', '清洁能源', '油转电', '撤退还是加仓', '去看看',
-    '基金销售服务', '化工集体涨停', '科创盈利确定性',
+    '金选指数基金',
+    '市场解读',
+    '去买入',
+    '更多产品',
+    '基金经理说',
+    '能源替代',
+    '清洁能源',
+    '油转电',
+    '撤退还是加仓',
+    '去看看',
+    '基金销售服务',
+    '化工集体涨停',
+    '科创盈利确定性',
   ];
 
   // ★ V8.1: 资讯标题行过滤 — 支付宝持仓页混入的新闻/资讯文本
   // 特征：含"利好事件""投资锦囊""基金经理说"等前缀，或含|分隔的资讯标题
   static final _infoTitlePattern = RegExp(
-    r'(?:^|[|｜])'          // 行首或竖线分隔
+    r'(?:^|[|｜])' // 行首或竖线分隔
     r'(?:利好事件|投资锦囊|基金经理说|市场解读|热门资讯|基金排行'
     r'|近\d年|跑赢|高增实|大增\d|增速破|涨幅榜|跌幅榜)'
-    r'|→$'                    // 以箭头结尾
-    r'|\|.*?(?:投资|收益|涨|跌|增|跑赢|破\d)',  // 含投资关键词的|分隔内容
+    r'|→$' // 以箭头结尾
+    r'|\|.*?(?:投资|收益|涨|跌|增|跑赢|破\d)', // 含投资关键词的|分隔内容
   );
 
   // 锚点行过滤：包含这些关键词的 %行 视为噪声（广告/解读文案混入）
   static const List<String> _fundMarketKeywords = [
-    '市场解读', '基金经理说', '地缘扰动', '算力', '能源替代', '油转电',
-    '化工集体涨停', '科创盈利', '撤退还是加仓', '需求进一步', '涨停',
-    '确定性强', '业绩披露', '基金销售服务', '更多产品',
+    '市场解读',
+    '基金经理说',
+    '地缘扰动',
+    '算力',
+    '能源替代',
+    '油转电',
+    '化工集体涨停',
+    '科创盈利',
+    '撤退还是加仓',
+    '需求进一步',
+    '涨停',
+    '确定性强',
+    '业绩披露',
+    '基金销售服务',
+    '更多产品',
   ];
 
   // ============================================================
@@ -99,21 +126,108 @@ class OcrService {
 
   // 离线备份：API不可用时使用
   static const List<String> _fallbackCompanyNames = [
-    '天弘', '华夏', '广发', '南方', '博时', '银华', '大成', '兴业', '长城',
-    '东方', '华商', '新华', '安信', '金鹰', '银河', '长盛', '国金', '中海',
-    '东吴', '华宝', '华富', '中航', '永赢', '永贏', '博道', '同泰', '恒越', '朱雀',
-    '中庚', '湘财', '南华', '江信',
-    '易方达', '嘉实', '招商', '中欧', '工银', '华安', '鹏华', '汇添富', '富国',
-    '建信', '国泰', '平安', '景顺长城', '万家', '国海富兰克林', '创金合信',
-    '中加', '泓德', '国投瑞银', '浦银安盛', '上银', '中信保诚', '鹏扬',
-    '农银汇理', '圆信永丰', '申万菱信', '融通', '浙商', '民生加银',
-    '前海开源', '诺安', '华泰保兴', '宝盈', '长安', '中融', '长信',
-    '华泰柏瑞', '上投摩根', '德邦', '国联安', '光大保德信', '海富通',
-    '中信建投', '摩根士丹利华鑫', '汇安', '汇丰晋信', '太平', '泰达宏利', '宏利',
-    '英大', '兴银', '中邮创业', '诺德', '红土创新', '财通', '中金',
-    '西部利得', '北信瑞丰', '嘉合', '格林', '睿远', '鑫元', '恒生前海',
-    '金元顺安', '西藏东财', '东方阿尔法', '摩根',
-    '云利', '生夏', '永嘉',
+    '天弘',
+    '华夏',
+    '广发',
+    '南方',
+    '博时',
+    '银华',
+    '大成',
+    '兴业',
+    '长城',
+    '东方',
+    '华商',
+    '新华',
+    '安信',
+    '金鹰',
+    '银河',
+    '长盛',
+    '国金',
+    '中海',
+    '东吴',
+    '华宝',
+    '华富',
+    '中航',
+    '永赢',
+    '永贏',
+    '博道',
+    '同泰',
+    '恒越',
+    '朱雀',
+    '中庚',
+    '湘财',
+    '南华',
+    '江信',
+    '易方达',
+    '嘉实',
+    '招商',
+    '中欧',
+    '工银',
+    '华安',
+    '鹏华',
+    '汇添富',
+    '富国',
+    '建信',
+    '国泰',
+    '平安',
+    '景顺长城',
+    '万家',
+    '国海富兰克林',
+    '创金合信',
+    '中加',
+    '泓德',
+    '国投瑞银',
+    '浦银安盛',
+    '上银',
+    '中信保诚',
+    '鹏扬',
+    '农银汇理',
+    '圆信永丰',
+    '申万菱信',
+    '融通',
+    '浙商',
+    '民生加银',
+    '前海开源',
+    '诺安',
+    '华泰保兴',
+    '宝盈',
+    '长安',
+    '中融',
+    '长信',
+    '华泰柏瑞',
+    '上投摩根',
+    '德邦',
+    '国联安',
+    '光大保德信',
+    '海富通',
+    '中信建投',
+    '摩根士丹利华鑫',
+    '汇安',
+    '汇丰晋信',
+    '太平',
+    '泰达宏利',
+    '宏利',
+    '英大',
+    '兴银',
+    '中邮创业',
+    '诺德',
+    '红土创新',
+    '财通',
+    '中金',
+    '西部利得',
+    '北信瑞丰',
+    '嘉合',
+    '格林',
+    '睿远',
+    '鑫元',
+    '恒生前海',
+    '金元顺安',
+    '西藏东财',
+    '东方阿尔法',
+    '摩根',
+    '云利',
+    '生夏',
+    '永嘉',
   ];
 
   // 动态列表（启动时由 initCompanyNames 从API更新）
@@ -125,7 +239,8 @@ class OcrService {
     try {
       // 直接用 http 包拉取，避免依赖 Dio/injection
       final client = HttpClient();
-      final req = await client.getUrl(Uri.parse('https://fund.eastmoney.com/js/jjjz_gs.js'));
+      final req = await client
+          .getUrl(Uri.parse('https://fund.eastmoney.com/js/jjjz_gs.js'));
       req.headers.set('User-Agent', 'Mozilla/5.0');
       req.headers.set('Referer', 'https://fund.eastmoney.com/');
       final resp = await req.close();
@@ -142,8 +257,17 @@ class OcrService {
       for (final m in matches) {
         var name = m.group(2)!;
         // 去掉常见后缀，提取基金产品名中使用的公司短名
-        for (final suffix in ['基金管理', '基金', '资产管理', '资管',
-            '证券(上海)资管', '证券资管', '证券', '(上海)', '(中国)']) {
+        for (final suffix in [
+          '基金管理',
+          '基金',
+          '资产管理',
+          '资管',
+          '证券(上海)资管',
+          '证券资管',
+          '证券',
+          '(上海)',
+          '(中国)'
+        ]) {
           name = name.replaceAll(suffix, '');
         }
         name = name.trim();
@@ -162,14 +286,21 @@ class OcrService {
     }
   }
 
-
-
   // 基金名开头OCR噪声字符（"！？"等）
   static final _nameNoisePrefix = RegExp(r'^[！？?;；:：\s]+');
 
   static const List<String> _fundSuffixKeywords = [
-    'ETF', 'LOF', 'QDII', '联接', '混合', '债券', '股票', '指数',
-    '发起式', '证券投资基金', '基金',
+    'ETF',
+    'LOF',
+    'QDII',
+    '联接',
+    '混合',
+    '债券',
+    '股票',
+    '指数',
+    '发起式',
+    '证券投资基金',
+    '基金',
   ];
 
   // ============================================================
@@ -192,7 +323,8 @@ class OcrService {
       debugPrint('[OCR-V9] Block X范围: left=$minLeft ~ right=$maxRight');
       // 打印前10个block的centerX和text
       for (int i = 0; i < blocks.length && i < 10; i++) {
-        debugPrint('[OCR-V9]   block[$i] cx=${blocks[i].centerx.toInt()} text="${blocks[i].text.substring(0, blocks[i].text.length > 20 ? 20 : blocks[i].text.length)}"');
+        debugPrint(
+            '[OCR-V9]   block[$i] cx=${blocks[i].centerx.toInt()} text="${blocks[i].text.substring(0, blocks[i].text.length > 20 ? 20 : blocks[i].text.length)}"');
       }
     }
 
@@ -218,7 +350,8 @@ class OcrService {
     debugPrint('[OCR-V9] 提取到 ${holdings.length} 条持仓');
     for (int i = 0; i < holdings.length; i++) {
       final h = holdings[i];
-      debugPrint('[OCR-V9]   #$i: "${h.name}" amt=${h.amount} yp=${h.yesterdayProfit} hpr=${h.holdingProfitRate}');
+      debugPrint(
+          '[OCR-V9]   #$i: "${h.name}" amt=${h.amount} yp=${h.yesterdayProfit} hpr=${h.holdingProfitRate}');
     }
 
     return _deduplicateHoldings(holdings);
@@ -264,7 +397,9 @@ class OcrService {
         .length;
 
     // 支付宝特征：%收益率行 + 基金公司名
-    final hasFundCompany = RegExp(r'(天弘|易方达|招商|平安|华夏|广发|南方|嘉实|富国|博时|中欧|工银|华安|鹏华|汇添富|兴全|景顺长城|交银|建信|银华|中银|国泰|华宝|永赢|同泰|诺德|泓德|恒越|新华|东吴|西部利得|万家|华泰柏瑞|长城|金鹰|申万菱信|长信|融通|国投瑞银|光大保德信|民生加银|浦银安盛|摩根|上投摩根)').hasMatch(text);
+    final hasFundCompany = RegExp(
+            r'(天弘|易方达|招商|平安|华夏|广发|南方|嘉实|富国|博时|中欧|工银|华安|鹏华|汇添富|兴全|景顺长城|交银|建信|银华|中银|国泰|华宝|永赢|同泰|诺德|泓德|恒越|新华|东吴|西部利得|万家|华泰柏瑞|长城|金鹰|申万菱信|长信|融通|国投瑞银|光大保德信|民生加银|浦银安盛|摩根|上投摩根)')
+        .hasMatch(text);
     if (text.contains('持有收益率排序') ||
         (text.contains('我的持有') && percentLineCount >= 2) ||
         percentLineCount >= 2 && hasFundCompany ||
@@ -292,7 +427,8 @@ class OcrService {
   // ============================================================
 
   /// Extract yesterday profit and holding profit from anchor context
-  static (double?, double?, double?) _extractProfits(String anchorLine, String? dataLine) {
+  static (double?, double?, double?) _extractProfits(
+      String anchorLine, String? dataLine) {
     double? yesterdayProfit;
     double? holdingProfit;
     double? holdingProfitRate;
@@ -300,7 +436,8 @@ class OcrService {
     // holding profit rate from anchor line
     final rateMatch = RegExp(r'([+-]?\d[\d,]*\.\d{2})%').firstMatch(anchorLine);
     if (rateMatch != null) {
-      holdingProfitRate = double.tryParse(rateMatch.group(1)!.replaceAll(',', ''));
+      holdingProfitRate =
+          double.tryParse(rateMatch.group(1)!.replaceAll(',', ''));
     }
 
     // holding profit from anchor line (number before %)
@@ -315,7 +452,8 @@ class OcrService {
     // yesterday profit from data line (number after amount)
     if (dataLine != null && dataLine.isNotEmpty) {
       final amtMatch = RegExp(r'(\d[\d,]*\.\d{2})').firstMatch(dataLine);
-      final pmMatches = RegExp(r'([+-]\d[\d,]*\.\d{2})').allMatches(dataLine).toList();
+      final pmMatches =
+          RegExp(r'([+-]\d[\d,]*\.\d{2})').allMatches(dataLine).toList();
       if (amtMatch != null && pmMatches.length >= 2) {
         for (final pm in pmMatches) {
           if (pm.start >= amtMatch.end) {
@@ -334,7 +472,8 @@ class OcrService {
     final holdings = <RecognizedHolding>[];
     final usedIndices = <int>{};
     final deferredHolding = <_DeferredName>[]; // V8-4.5 推迟的不完整名
-    final suffixFragments = <({String name, double amount, int anchorIdx})>[]; // V8.3 后缀碎片
+    final suffixFragments =
+        <({String name, double amount, int anchorIdx})>[]; // V8.3 后缀碎片
 
     // V8: 找所有锚点行（含%收益率）
     final anchorIndices = <int>[];
@@ -362,7 +501,8 @@ class OcrService {
       // 匹配: 中文/)/]/C 后紧跟 ±数字.XX（2或3位小数）不以%结尾
       // 例如: "混合C-1.44+", "指数C-2.096" — OCR截断%符号
       // ★ 修复: 前缀长度<=5才视为锚点；长前缀（如"平安高端装备混合-129.33"）是数据行，不是锚点
-      final m = RegExp(r'(?:[\u4e00-\u9fa5\))\]]|C)[+-]\d[\d,]*\.\d{2,3}(?!%)').firstMatch(line);
+      final m = RegExp(r'(?:[\u4e00-\u9fa5\))\]]|C)[+-]\d[\d,]*\.\d{2,3}(?!%)')
+          .firstMatch(line);
       if (m != null && line.substring(0, m.start).trim().length <= 5) {
         fallbackAnchorIndices.add(i);
         continue;
@@ -371,7 +511,8 @@ class OcrService {
       // 例如: "+4.39 +1" — 两个±数字，无中文，无%
       if (!RegExp(r'[\u4e00-\u9fa5]').hasMatch(line) &&
           !line.contains('%') &&
-          RegExp(r'^[+-]?\d[\d,]*\.\d{2}([+-]\d[\d,]*\.\d{2})?$').hasMatch(line)) {
+          RegExp(r'^[+-]?\d[\d,]*\.\d{2}([+-]\d[\d,]*\.\d{2})?$')
+              .hasMatch(line)) {
         fallbackAnchorIndices.add(i);
         continue;
       }
@@ -385,20 +526,24 @@ class OcrService {
       }
     }
 
-    if (anchorIndices.isEmpty && fallbackAnchorIndices.isEmpty) return _parseGeneric(lines);
+    if (anchorIndices.isEmpty && fallbackAnchorIndices.isEmpty) {
+      return _parseGeneric(lines);
+    }
 
     // 合并锚点列表（降级锚点排在后面）
     final allAnchors = <int>[...anchorIndices, ...fallbackAnchorIndices];
     // 降级锚点去重
     allAnchors.sort();
 
-    debugPrint('[OCR-V8] allAnchors: $allAnchors (std=$anchorIndices fallback=$fallbackAnchorIndices)');
+    debugPrint(
+        '[OCR-V8] allAnchors: $allAnchors (std=$anchorIndices fallback=$fallbackAnchorIndices)');
     for (int idx = 0; idx < allAnchors.length; idx++) {
       final anchorIdx = allAnchors[idx];
       if (usedIndices.contains(anchorIdx)) continue;
 
       final anchorLine = lines[anchorIdx].trim();
-      debugPrint('[OCR-V8] Anchor idx=$anchorIdx line="$anchorLine" isFallback=${fallbackAnchorIndices.contains(anchorIdx)}');
+      debugPrint(
+          '[OCR-V8] Anchor idx=$anchorIdx line="$anchorLine" isFallback=${fallbackAnchorIndices.contains(anchorIdx)}');
       final prevAnchor = idx > 0 ? allAnchors[idx - 1] : -1;
       final isFallback = fallbackAnchorIndices.contains(anchorIdx);
 
@@ -419,11 +564,13 @@ class OcrService {
         rateMatch = RegExp(r'([+-]?\d[\d,]*\.\d{2})%').firstMatch(anchorLine);
         if (rateMatch == null) {
           // ★ 兜底: 匹配 '数字 ±数字.XX%' 混合格式（如 3.35 -9.36%）
-          final mixedMatch = RegExp(r'\d[\d,]*\.\d{2}([+-]\d[\d,]*\.\d{2})%').firstMatch(anchorLine);
+          final mixedMatch = RegExp(r'\d[\d,]*\.\d{2}([+-]\d[\d,]*\.\d{2})%')
+              .firstMatch(anchorLine);
           if (mixedMatch != null) {
             rateMatch = mixedMatch;
           } else {
-            usedIndices.add(anchorIdx); continue;
+            usedIndices.add(anchorIdx);
+            continue;
           }
         }
         final beforePercent = anchorLine.substring(0, rateMatch.start);
@@ -448,11 +595,14 @@ class OcrService {
       // 直接反向搜索属于此锚点的基金，跳过 V8-2/V8-3 的常规数据行搜索
       if (!isFallback && rateMatch != null) {
         final afterPercent = anchorLine.substring(rateMatch.end).trim();
-        if (afterPercent.isNotEmpty && !_fundCompanyNames.any((c) => afterPercent.contains(c))) {
+        if (afterPercent.isNotEmpty &&
+            !_fundCompanyNames.any((c) => afterPercent.contains(c))) {
           // 纯噪声锚点：收集锚点前所有候选行（从远→近的顺序）
           final candidates = <String>[];
           final candIdxs = <int>[];
-          for (int k = anchorIdx - 1; k > prevAnchor && k >= anchorIdx - 12; k--) {
+          for (int k = anchorIdx - 1;
+              k > prevAnchor && k >= anchorIdx - 12;
+              k--) {
             if (usedIndices.contains(k) || anchorIndices.contains(k)) continue;
             final nl = lines[k].trim();
             if (nl.isEmpty || _isNoiseLine(nl) || _isHeaderLine(nl)) continue;
@@ -478,14 +628,19 @@ class OcrService {
           for (int ci = 0; ci < candidates.length; ci++) {
             if (ci == fundCi) continue;
             final a = _extractAmountFromLine(candidates[ci]);
-            if (a != null && a >= 10) { noiseAmt = a; usedIndices.add(candIdxs[ci]); break; }
+            if (a != null && a >= 10) {
+              noiseAmt = a;
+              usedIndices.add(candIdxs[ci]);
+              break;
+            }
           }
 
           // 后缀：基金名行之后的所有 class suffix 行
           final noiseSuffixes = <String>[];
           if (fundCi >= 0 && noiseAmt >= 10) {
             for (int ci = fundCi + 1; ci < candidates.length; ci++) {
-              if (_isClassSuffix(candidates[ci]) && !_isNoiseLine(candidates[ci])) {
+              if (_isClassSuffix(candidates[ci]) &&
+                  !_isNoiseLine(candidates[ci])) {
                 noiseSuffixes.add(candidates[ci]);
                 usedIndices.add(candIdxs[ci]);
               }
@@ -493,10 +648,22 @@ class OcrService {
           }
 
           if (noiseFund.isNotEmpty && noiseAmt >= 10) {
-            final clean = _v8Clean(noiseFund.replaceAll(RegExp(r'[\-+]\d{1,3}\.\d{2}'), '') + noiseSuffixes.join());
-            if (_v8IsValidName(clean) && !holdings.any((h) => _isDuplicateName(h.name, clean))) {
-              final (yp, hp, hpr) = _extractProfits(anchorLine, lines[anchorIdx]);
-              holdings.add(RecognizedHolding(code: '', name: clean, amount: noiseAmt, yesterdayProfit: yp, holdingProfit: hp, holdingProfitRate: hpr, confidence: 0.5, needsCodeMatch: true));
+            final clean = _v8Clean(
+                noiseFund.replaceAll(RegExp(r'[\-+]\d{1,3}\.\d{2}'), '') +
+                    noiseSuffixes.join());
+            if (_v8IsValidName(clean) &&
+                !holdings.any((h) => _isDuplicateName(h.name, clean))) {
+              final (yp, hp, hpr) =
+                  _extractProfits(anchorLine, lines[anchorIdx]);
+              holdings.add(RecognizedHolding(
+                  code: '',
+                  name: clean,
+                  amount: noiseAmt,
+                  yesterdayProfit: yp,
+                  holdingProfit: hp,
+                  holdingProfitRate: hpr,
+                  confidence: 0.5,
+                  needsCodeMatch: true));
             }
           }
           usedIndices.add(anchorIdx);
@@ -540,13 +707,18 @@ class OcrService {
       if (dataLineIdx == null || fundPrefix.isEmpty) {
         // V8-2b-1b: 向前找基金名（锚点上方，正常方向）
         {
-          for (int k = anchorIdx - 1; k > prevAnchor && k >= anchorIdx - 6; k--) {
+          for (int k = anchorIdx - 1;
+              k > prevAnchor && k >= anchorIdx - 6;
+              k--) {
             if (usedIndices.contains(k) || anchorIndices.contains(k)) continue;
             final line = lines[k].trim();
-            if (line.isEmpty || _isNoiseLine(line) || _isHeaderLine(line)) continue;
+            if (line.isEmpty || _isNoiseLine(line) || _isHeaderLine(line)) {
+              continue;
+            }
             if (_fundCompanyNames.any((c) => line.contains(c))) {
               // 提取基金名：去掉行内金额（如"广发远见智选混合 656.20"→"广发远见智选混合"）
-              final amountMatch = RegExp(r'[-]?(\d[\d,]*\.\d{2})').firstMatch(line);
+              final amountMatch =
+                  RegExp(r'[-]?(\d[\d,]*\.\d{2})').firstMatch(line);
               if (amountMatch != null) {
                 nameFrom3Row = line.substring(0, amountMatch.start).trim();
                 final parsed = _parseAmount(amountMatch.group(1)!).abs();
@@ -567,8 +739,11 @@ class OcrService {
           if (usedIndices.contains(k) || anchorIndices.contains(k)) continue;
           if (k == dataLineIdx) continue; // 跳过已处理的基金名行
           final line = lines[k].trim();
-          if (line.isEmpty || _isNoiseLine(line) || _isHeaderLine(line)) continue;
-          final m = RegExp(r'^([+-]?\d[\d,]*\.\d{2})([+-]\d[\d,]*\.\d{2})?$').firstMatch(line);
+          if (line.isEmpty || _isNoiseLine(line) || _isHeaderLine(line)) {
+            continue;
+          }
+          final m = RegExp(r'^([+-]?\d[\d,]*\.\d{2})([+-]\d[\d,]*\.\d{2})?$')
+              .firstMatch(line);
           if (m != null) {
             final val = _parseAmount(m.group(1)!).abs();
             if (val >= 10) {
@@ -582,7 +757,8 @@ class OcrService {
         // V8-2b-3: 如果没有单独金额，尝试从锚点行提取持有收益
         if (amount < 10 && nameFrom3Row.isNotEmpty && rateMatch != null) {
           final afterPercent = anchorLine.substring(rateMatch.end).trim();
-          final hpMatch = RegExp(r'([+-]?\d[\d,]*\.\d{2})').firstMatch(afterPercent);
+          final hpMatch =
+              RegExp(r'([+-]?\d[\d,]*\.\d{2})').firstMatch(afterPercent);
           if (hpMatch != null) {
             amount = _parseAmount(hpMatch.group(1)!).abs();
           }
@@ -592,11 +768,15 @@ class OcrService {
           String raw = nameFrom3Row + suffix;
           final cleanName = _v8Clean(raw);
           // ★ 不完整名检查：缺类别后缀→推迟到 Phase 1.5/2.5 拼接
-          final hasTypeSuffix = RegExp(r'(混合|指数|股票|债券|ETF|LOF|QDII|联接|增强)[A-C]?$').hasMatch(cleanName);
+          final hasTypeSuffix =
+              RegExp(r'(混合|指数|股票|债券|ETF|LOF|QDII|联接|增强)[A-C]?$')
+                  .hasMatch(cleanName);
           if (_v8IsValidName(cleanName) && hasTypeSuffix) {
-            final isDup = holdings.any((h) => _isDuplicateName(h.name, cleanName));
+            final isDup =
+                holdings.any((h) => _isDuplicateName(h.name, cleanName));
             if (!isDup) {
-              final (yp, hp, hpr) = _extractProfits(anchorLine, dataLineIdx != null ? lines[dataLineIdx] : null);
+              final (yp, hp, hpr) = _extractProfits(
+                  anchorLine, dataLineIdx != null ? lines[dataLineIdx] : null);
               holdings.add(RecognizedHolding(
                 code: '', name: cleanName, amount: amount,
                 yesterdayProfit: yp, holdingProfit: hp, holdingProfitRate: hpr,
@@ -609,42 +789,68 @@ class OcrService {
             continue; // 已处理，跳到下一个锚点
           }
           // 名字不完整（缺后缀），跳过此锚点，留给 Phase 1.5/2.5
-          debugPrint('[OCR-V8] V8-2b-4: incomplete name "$cleanName", deferring to Phase 1.5/2.5');
+          debugPrint(
+              '[OCR-V8] V8-2b-4: incomplete name "$cleanName", deferring to Phase 1.5/2.5');
         }
         // ★ V8-2c: fallback anchor 最终兜底
-        debugPrint('[OCR-V8] V8-2c check: isFallback=$isFallback amount=$amount nameFrom3Row="$nameFrom3Row" dataLineIdx=$dataLineIdx');
+        debugPrint(
+            '[OCR-V8] V8-2c check: isFallback=$isFallback amount=$amount nameFrom3Row="$nameFrom3Row" dataLineIdx=$dataLineIdx');
         if (isFallback && amount < 10 && nameFrom3Row.isEmpty) {
-          final selfAmt = _parseAmount(anchorLine.replaceAll(RegExp(r'[^\d\.-]'), '')).abs();
-          debugPrint('[OCR-V8] V8-2c: selfAmt=$selfAmt, searching range ${(prevAnchor > anchorIdx - 8 ? prevAnchor : anchorIdx - 8)}..${anchorIdx - 1}');
+          final selfAmt =
+              _parseAmount(anchorLine.replaceAll(RegExp(r'[^\d\.-]'), ''))
+                  .abs();
+          debugPrint(
+              '[OCR-V8] V8-2c: selfAmt=$selfAmt, searching range ${(prevAnchor > anchorIdx - 8 ? prevAnchor : anchorIdx - 8)}..${anchorIdx - 1}');
           if (selfAmt >= 10) {
-            for (int k = anchorIdx - 1; k > prevAnchor && k >= anchorIdx - 8; k--) {
-              if (usedIndices.contains(k) || anchorIndices.contains(k) || fallbackAnchorIndices.contains(k)) {
-                debugPrint('[OCR-V8] V8-2c: skip idx=$k (used/anchor/fallback)'); continue; }
+            for (int k = anchorIdx - 1;
+                k > prevAnchor && k >= anchorIdx - 8;
+                k--) {
+              if (usedIndices.contains(k) ||
+                  anchorIndices.contains(k) ||
+                  fallbackAnchorIndices.contains(k)) {
+                debugPrint(
+                    '[OCR-V8] V8-2c: skip idx=$k (used/anchor/fallback)');
+                continue;
+              }
               final line = lines[k].trim();
               debugPrint('[OCR-V8] V8-2c: inspect idx=$k line="$line"');
-              if (line.isEmpty || _isNoiseLine(line) || _isHeaderLine(line)) continue;
+              if (line.isEmpty || _isNoiseLine(line) || _isHeaderLine(line)) {
+                continue;
+              }
               final hasCompany = _fundCompanyNames.any((c) => line.contains(c));
               final hasChinese = RegExp(r'[\u4e00-\u9fa5]{4,}').hasMatch(line);
-              debugPrint('[OCR-V8] V8-2c: idx=$k hasCompany=$hasCompany hasChinese=$hasChinese');
+              debugPrint(
+                  '[OCR-V8] V8-2c: idx=$k hasCompany=$hasCompany hasChinese=$hasChinese');
               if (hasCompany && hasChinese) {
                 final clean = _v8Clean(line + suffix);
-                final hasTypeSuffix = RegExp(r'(混合|指数|股票|债券|ETF|LOF|QDII|联接|增强)[A-C]?$').hasMatch(clean);
-                if (_v8IsValidName(clean) && hasTypeSuffix &&
+                final hasTypeSuffix =
+                    RegExp(r'(混合|指数|股票|债券|ETF|LOF|QDII|联接|增强)[A-C]?$')
+                        .hasMatch(clean);
+                if (_v8IsValidName(clean) &&
+                    hasTypeSuffix &&
                     !holdings.any((h) => _isDuplicateName(h.name, clean))) {
                   final (yp, hp, hpr) = _extractProfits(anchorLine, null);
                   holdings.add(RecognizedHolding(
-                    code: '', name: clean, amount: selfAmt,
-                    yesterdayProfit: yp, holdingProfit: hp, holdingProfitRate: hpr,
-                    confidence: 0.5, needsCodeMatch: true,
+                    code: '',
+                    name: clean,
+                    amount: selfAmt,
+                    yesterdayProfit: yp,
+                    holdingProfit: hp,
+                    holdingProfitRate: hpr,
+                    confidence: 0.5,
+                    needsCodeMatch: true,
                   ));
-                  debugPrint('[OCR-V8] V8-2c fallback rescue: "$clean" amt=$selfAmt from anchor idx=$anchorIdx');
+                  debugPrint(
+                      '[OCR-V8] V8-2c fallback rescue: "$clean" amt=$selfAmt from anchor idx=$anchorIdx');
                   usedIndices.add(anchorIdx);
                   usedIndices.add(k);
                   break;
                 } else if (_v8IsValidName(clean)) {
                   // 有公司名但缺类型后缀 → 存入 deferredHolding 交给 Phase 2.6 补全
-                  debugPrint('[OCR-V8] V8-2c deferred (no suffix): "$clean" amt=$selfAmt from anchor idx=$anchorIdx');
-                  deferredHolding.add(_DeferredName(clean, selfAmt, anchorIdx, k));
+                  debugPrint(
+                      '[OCR-V8] V8-2c deferred (no suffix): "$clean" amt=$selfAmt from anchor idx=$anchorIdx');
+                  deferredHolding
+                      .add(_DeferredName(clean, selfAmt, anchorIdx, k));
                   usedIndices.add(anchorIdx);
                   usedIndices.add(k);
                   break;
@@ -655,8 +861,10 @@ class OcrService {
                 final clean = _v8Clean(line + suffix);
                 if (_v8IsValidName(clean) &&
                     !holdings.any((h) => _isDuplicateName(h.name, clean))) {
-                  debugPrint('[OCR-V8] V8-2c deferred (unicode variant): "$clean" amt=$selfAmt from anchor idx=$anchorIdx');
-                  deferredHolding.add(_DeferredName(clean, selfAmt, anchorIdx, k));
+                  debugPrint(
+                      '[OCR-V8] V8-2c deferred (unicode variant): "$clean" amt=$selfAmt from anchor idx=$anchorIdx');
+                  deferredHolding
+                      .add(_DeferredName(clean, selfAmt, anchorIdx, k));
                   usedIndices.add(anchorIdx);
                   usedIndices.add(k);
                   break;
@@ -672,15 +880,20 @@ class OcrService {
         continue;
       }
 
-      debugPrint('[OCR-V8] V8-2 result: dataLineIdx=$dataLineIdx fundPrefix="$fundPrefix" amount=$amount nameFrom3Row="$nameFrom3Row"');
+      debugPrint(
+          '[OCR-V8] V8-2 result: dataLineIdx=$dataLineIdx fundPrefix="$fundPrefix" amount=$amount nameFrom3Row="$nameFrom3Row"');
       // V8-3: fundPrefix为空时的多策略补全
       if (fundPrefix.isEmpty) {
         // V8-3a: 直接在锚点上方搜含公司名的行（优先，处理"金额行"+"基金名"+"锚点"格式）
         if (nameFrom3Row.isEmpty) {
-          for (int k = anchorIdx - 1; k > prevAnchor && k >= anchorIdx - 5; k--) {
+          for (int k = anchorIdx - 1;
+              k > prevAnchor && k >= anchorIdx - 5;
+              k--) {
             if (usedIndices.contains(k) || anchorIndices.contains(k)) continue;
             final line = lines[k].trim();
-            if (line.isEmpty || _isNoiseLine(line) || _isHeaderLine(line)) continue;
+            if (line.isEmpty || _isNoiseLine(line) || _isHeaderLine(line)) {
+              continue;
+            }
             if (_fundCompanyNames.any((c) => line.contains(c))) {
               nameFrom3Row = line;
               debugPrint('[OCR-V8] V8-3a found company line at $k: "$line"');
@@ -691,26 +904,52 @@ class OcrService {
         // V8-3b: 纯数字行格式（原逻辑）
         if (nameFrom3Row.isEmpty) {
           int? pureNumIdx;
-          for (int k = anchorIdx - 1; k > prevAnchor && k >= anchorIdx - 6; k--) {
+          for (int k = anchorIdx - 1;
+              k > prevAnchor && k >= anchorIdx - 6;
+              k--) {
             if (usedIndices.contains(k) || anchorIndices.contains(k)) continue;
             final line = lines[k].trim();
-            if (line.isEmpty || _isNoiseLine(line) || _isHeaderLine(line)) continue;
-            if (RegExp(r'^[\d.+-]+$').hasMatch(line)) { pureNumIdx = k; break; }
+            if (line.isEmpty || _isNoiseLine(line) || _isHeaderLine(line)) {
+              continue;
+            }
+            if (RegExp(r'^[\d.+-]+$').hasMatch(line)) {
+              pureNumIdx = k;
+              break;
+            }
           }
           if (pureNumIdx != null) {
             bool found = false;
-            for (int k = pureNumIdx - 1; k > prevAnchor && k >= pureNumIdx - 2; k--) {
-              if (usedIndices.contains(k) || anchorIndices.contains(k)) continue;
+            for (int k = pureNumIdx - 1;
+                k > prevAnchor && k >= pureNumIdx - 2;
+                k--) {
+              if (usedIndices.contains(k) || anchorIndices.contains(k)) {
+                continue;
+              }
               final line = lines[k].trim();
-              if (line.isEmpty || _isNoiseLine(line) || _isHeaderLine(line)) continue;
-              if (_fundCompanyNames.any((c) => line.contains(c))) { nameFrom3Row = line; found = true; break; }
+              if (line.isEmpty || _isNoiseLine(line) || _isHeaderLine(line)) {
+                continue;
+              }
+              if (_fundCompanyNames.any((c) => line.contains(c))) {
+                nameFrom3Row = line;
+                found = true;
+                break;
+              }
             }
             if (!found) {
-              for (int k = pureNumIdx + 1; k < lines.length && k <= pureNumIdx + 2; k++) {
-                if (usedIndices.contains(k) || anchorIndices.contains(k)) continue;
+              for (int k = pureNumIdx + 1;
+                  k < lines.length && k <= pureNumIdx + 2;
+                  k++) {
+                if (usedIndices.contains(k) || anchorIndices.contains(k)) {
+                  continue;
+                }
                 final line = lines[k].trim();
-                if (line.isEmpty || _isNoiseLine(line) || _isHeaderLine(line)) continue;
-                if (_fundCompanyNames.any((c) => line.contains(c))) { nameFrom3Row = line; break; }
+                if (line.isEmpty || _isNoiseLine(line) || _isHeaderLine(line)) {
+                  continue;
+                }
+                if (_fundCompanyNames.any((c) => line.contains(c))) {
+                  nameFrom3Row = line;
+                  break;
+                }
               }
             }
           }
@@ -730,14 +969,16 @@ class OcrService {
       // 不完整名不应该进入 V8-6，否则 Phase 2.5 找不到可用行
       // ★ 正则需包容 OCR 误识（指教→指数）和括号内容（联接(LOF)C、指数(QDI-LOF)A）
       final hasTypeSuffix = RegExp(
-        r'(混合|混台|指数|指教|股票|债券|ETF|LOF|QDII|QDI|联接|增强|优选)(\([^)]*\))?[A-C]?$'
-      ).hasMatch(cleanName);
+              r'(混合|混台|指数|指教|股票|债券|ETF|LOF|QDII|QDI|联接|增强|优选)(\([^)]*\))?[A-C]?$')
+          .hasMatch(cleanName);
       if (!hasTypeSuffix) {
-        debugPrint('[OCR-V8] V8-4.5: "$cleanName" missing type suffix, deferring to Phase 2.5');
+        debugPrint(
+            '[OCR-V8] V8-4.5: "$cleanName" missing type suffix, deferring to Phase 2.5');
         usedIndices.add(anchorIdx);
         usedIndices.add(dataLineIdx); // ★ 标 used 防 Phase 1.5 垃圾
         // 存入延迟列表，供 Phase 2.6 补全
-        deferredHolding.add((_DeferredName(cleanName, amount, anchorIdx, dataLineIdx)));
+        deferredHolding
+            .add((_DeferredName(cleanName, amount, anchorIdx, dataLineIdx)));
         continue; // 跳到下一个锚点
       }
 
@@ -745,33 +986,50 @@ class OcrService {
       if (!_v8IsValidName(cleanName)) {
         // ★ V8.3: 后缀碎片（无公司前缀但有类型词）→ 存入 suffixFragments 待合并
         // 但如果名字含公司前缀，说明是完整基金名缺A/C后缀，不应当碎片
-        final hasCompanyPrefix = _fundCompanyNames.any((c) => cleanName.startsWith(c));
-        if (!hasCompanyPrefix && RegExp(r'(混合|指数|股票|债券|ETF|LOF|QDII|联接|增强|优选|量化)(\([^)]*\))?[A-Ca-c]?$').hasMatch(cleanName)) {
-          suffixFragments.add((name: cleanName, amount: amount, anchorIdx: anchorIdx));
-          debugPrint('[OCR-V8] V8-5: suffix fragment "$cleanName" amt=$amount saved for merge');
+        final hasCompanyPrefix =
+            _fundCompanyNames.any((c) => cleanName.startsWith(c));
+        if (!hasCompanyPrefix &&
+            RegExp(r'(混合|指数|股票|债券|ETF|LOF|QDII|联接|增强|优选|量化)(\([^)]*\))?[A-Ca-c]?$')
+                .hasMatch(cleanName)) {
+          suffixFragments
+              .add((name: cleanName, amount: amount, anchorIdx: anchorIdx));
+          debugPrint(
+              '[OCR-V8] V8-5: suffix fragment "$cleanName" amt=$amount saved for merge');
         } else if (hasCompanyPrefix) {
           // 有公司名但验证失败（通常缺A/C后缀），保留为holding + needsCodeMatch
-          debugPrint('[OCR-V8] V8-5: valid company name but incomplete "$cleanName" amt=$amount, keeping with needsCodeMatch');
+          debugPrint(
+              '[OCR-V8] V8-5: valid company name but incomplete "$cleanName" amt=$amount, keeping with needsCodeMatch');
           holdings.add(RecognizedHolding(
-            code: '', name: cleanName, amount: amount,
-            confidence: 0.5, needsCodeMatch: true,
+            code: '',
+            name: cleanName,
+            amount: amount,
+            confidence: 0.5,
+            needsCodeMatch: true,
           ));
         }
         usedIndices.add(anchorIdx);
         continue;
       }
-      if (amount < 10) { usedIndices.add(anchorIdx); continue; }
+      if (amount < 10) {
+        usedIndices.add(anchorIdx);
+        continue;
+      }
 
       // ★ V8.2: 缺 A/C 后缀 → 尝试向下 1-2 行找独立的 C/A 字母
       var finalName = cleanName;
-      if (RegExp(r'(混合|指数|指教|股票|债券|ETF|LOF|QDII|联接|增强|优选|混台)[A-Ca-c]?$').hasMatch(cleanName) &&
-          !RegExp(r'(混合|指数|指教|股票|债券|ETF|LOF|QDII|联接|增强|优选|混台)[A-C]$').hasMatch(cleanName)) {
-        for (int k = anchorIdx + 1; k < lines.length && k <= anchorIdx + 3; k++) {
+      if (RegExp(r'(混合|指数|指教|股票|债券|ETF|LOF|QDII|联接|增强|优选|混台)[A-Ca-c]?$')
+              .hasMatch(cleanName) &&
+          !RegExp(r'(混合|指数|指教|股票|债券|ETF|LOF|QDII|联接|增强|优选|混台)[A-C]$')
+              .hasMatch(cleanName)) {
+        for (int k = anchorIdx + 1;
+            k < lines.length && k <= anchorIdx + 3;
+            k++) {
           if (usedIndices.contains(k)) continue;
           final nextL = lines[k].trim();
           if (RegExp(r'^[A-Ca-c]$').hasMatch(nextL)) {
             finalName = cleanName + nextL.toUpperCase();
-            debugPrint('[OCR-V8] V8-5: appended suffix "$nextL" → "$finalName"');
+            debugPrint(
+                '[OCR-V8] V8-5: appended suffix "$nextL" → "$finalName"');
             break;
           }
         }
@@ -783,9 +1041,14 @@ class OcrService {
         final dataLineText = lines[dataLineIdx];
         final (yp, hp, hpr) = _extractProfits(anchorLine, dataLineText);
         holdings.add(RecognizedHolding(
-          code: '', name: finalName, amount: amount,
-          yesterdayProfit: yp, holdingProfit: hp, holdingProfitRate: hpr,
-          confidence: 0.7, needsCodeMatch: true,
+          code: '',
+          name: finalName,
+          amount: amount,
+          yesterdayProfit: yp,
+          holdingProfit: hp,
+          holdingProfitRate: hpr,
+          confidence: 0.7,
+          needsCodeMatch: true,
         ));
       }
 
@@ -818,15 +1081,23 @@ class OcrService {
         // 金额行
         if (amt == null) {
           final a = _extractAmountFromLine(nl);
-          if (a != null && a >= 10) { amt = a; continue; }
+          if (a != null && a >= 10) {
+            amt = a;
+            continue;
+          }
         }
         // 后缀行（先strip | 前缀）
         final nlClean = nl.replaceFirst(RegExp(r'^[|\\s]+'), '');
         // ★ V8.2: 跳过含乱码的后缀行（日文假名/龐國@等）
-        if (RegExp(r'[\u3040-\u309F\u30A0-\u30FF龜國@]{1,}').hasMatch(nlClean)) continue;
+        if (RegExp(r'[\u3040-\u309F\u30A0-\u30FF龜國@]{1,}').hasMatch(nlClean)) {
+          continue;
+        }
         // ★ V8.2: 跳过含“指数教基金國”等拼接垃圾的后缀
         if (RegExp(r'(指数|指教)教|基金國|基金区').hasMatch(nlClean)) continue;
-        if (_isClassSuffix(nlClean)) { suffixes.add(nlClean); continue; }
+        if (_isClassSuffix(nlClean)) {
+          suffixes.add(nlClean);
+          continue;
+        }
         // 纯数字收益行
         if (RegExp(r'^[+-]?\d[\d,]*\.\d{2}$').hasMatch(nl)) continue;
         // 找到金额后的非预期行 → 结束
@@ -839,63 +1110,90 @@ class OcrService {
           final nl = lines[j].trim();
           if (nl.isEmpty || _isNoiseLine(nl) || _isHeaderLine(nl)) continue;
           final a = _extractAmountFromLine(nl);
-          if (a != null && a >= 10) { amt = a; break; }
+          if (a != null && a >= 10) {
+            amt = a;
+            break;
+          }
           if (_fundCompanyNames.any((c) => nl.contains(c))) break;
         }
       }
 
       if (amt != null && amt >= 10) {
         // 清洗名字：去掉行内金额（\d+\.\d{2}）和带符号收益（±\d+.\d{2}）
-        final nameOnly = line
-          .replaceAll(RegExp(r'[\-+]?\d[\d,]*\.\d{2}'), '')
-          .trim();
+        final nameOnly =
+            line.replaceAll(RegExp(r'[\-+]?\d[\d,]*\.\d{2}'), '').trim();
         // ★ V8.3: 放宽后缀验证 — 改用「拼接后整体验证」方式
         // 之前逐个后缀白名单匹配太严，"设备指数A"等被拒
         final validSuffixes = <String>[];
         for (final suf in suffixes) {
           final sufClean = _v8Clean(suf);
           // 跳过乱码/垃圾
-          if (RegExp(r'[\u3040-\u309F\u30A0-\u30FF龜國@]').hasMatch(sufClean)) continue;
+          if (RegExp(r'[\u3040-\u309F\u30A0-\u30FF龜國@]').hasMatch(sufClean)) {
+            continue;
+          }
           if (RegExp(r'(指数|指教)教|基金國|基金区').hasMatch(sufClean)) continue;
           // 方法：拼接后看整体是否含类型词+份额后缀
           final trial = _v8Clean(nameOnly + sufClean);
-          if (RegExp(r'(混合|指数|股票|债券|ETF|LOF|QDII|联接|增强|优选|量化)(\([^)]*\))?[A-Ca-c]?$').hasMatch(trial)) {
+          if (RegExp(
+                  r'(混合|指数|股票|债券|ETF|LOF|QDII|联接|增强|优选|量化)(\([^)]*\))?[A-Ca-c]?$')
+              .hasMatch(trial)) {
             validSuffixes.add(sufClean);
           }
         }
         final clean = _v8Clean(nameOnly + validSuffixes.join());
-        debugPrint('[OCR-V8] Phase 1.5 found: "$clean" amt=$amt suffixes=$suffixes validSuffixes=$validSuffixes');
-        if (_v8IsValidName(clean) && !holdings.any((h) => _isDuplicateName(h.name, clean))) {
+        debugPrint(
+            '[OCR-V8] Phase 1.5 found: "$clean" amt=$amt suffixes=$suffixes validSuffixes=$validSuffixes');
+        if (_v8IsValidName(clean) &&
+            !holdings.any((h) => _isDuplicateName(h.name, clean))) {
           final (yp, hp, hpr) = _extractProfits(lines[i], null);
           // ★ V8.2: 缺 A/C 后缀时，尝试向下1-2行找独立 A/C
           var finalName = clean;
-          if (RegExp(r'(混合|指数|股票|债券|ETF|LOF|QDII|联接|增强)[A-Ca-c]?$').hasMatch(clean) &&
-              !RegExp(r'(混合|指数|股票|债券|ETF|LOF|QDII|联接|增强)[A-C]$').hasMatch(clean)) {
+          if (RegExp(r'(混合|指数|股票|债券|ETF|LOF|QDII|联接|增强)[A-Ca-c]?$')
+                  .hasMatch(clean) &&
+              !RegExp(r'(混合|指数|股票|债券|ETF|LOF|QDII|联接|增强)[A-C]$')
+                  .hasMatch(clean)) {
             // 名字以类型词结尾但缺 A/C
             for (int jj = i + 1; jj < lines.length && jj <= i + 3; jj++) {
               if (usedIndices.contains(jj)) continue;
               final nextL = lines[jj].trim();
               if (RegExp(r'^[A-Ca-c]$').hasMatch(nextL)) {
                 finalName = clean + nextL.toUpperCase();
-                debugPrint('[OCR-V8] Phase 1.5: appended suffix "$nextL" → "$finalName"');
+                debugPrint(
+                    '[OCR-V8] Phase 1.5: appended suffix "$nextL" → "$finalName"');
                 break;
               }
             }
           }
           // ★ 缺类型后缀时存入 deferredHolding 交给 Phase 2.6 补全
-          final hasTypeSuffix = RegExp(r'(混合|指数|股票|债券|ETF|LOF|QDII|联接|增强)[A-C]?$').hasMatch(finalName);
+          final hasTypeSuffix =
+              RegExp(r'(混合|指数|股票|债券|ETF|LOF|QDII|联接|增强)[A-C]?$')
+                  .hasMatch(finalName);
           if (!hasTypeSuffix) {
-            debugPrint('[OCR-V8] Phase 1.5: deferring "$finalName" (no type suffix) to Phase 2.6');
+            debugPrint(
+                '[OCR-V8] Phase 1.5: deferring "$finalName" (no type suffix) to Phase 2.6');
             deferredHolding.add(_DeferredName(finalName, amt, i, i));
           } else {
-            holdings.add(RecognizedHolding(code: '', name: finalName, amount: amt, yesterdayProfit: yp, holdingProfit: hp, holdingProfitRate: hpr, confidence: 0.5, needsCodeMatch: true));
+            holdings.add(RecognizedHolding(
+                code: '',
+                name: finalName,
+                amount: amt,
+                yesterdayProfit: yp,
+                holdingProfit: hp,
+                holdingProfitRate: hpr,
+                confidence: 0.5,
+                needsCodeMatch: true));
           }
-        } else if (_v8IsValidName(clean) == false && validSuffixes.isEmpty && RegExp(r'[\u4e00-\u9fa5]{4,}').hasMatch(clean)) {
+        } else if (_v8IsValidName(clean) == false &&
+            validSuffixes.isEmpty &&
+            RegExp(r'[\u4e00-\u9fa5]{4,}').hasMatch(clean)) {
           // ★ V8.2: 即使名字不完整（缺后缀），只要有4+汉字且含公司名，也加入 needsCodeMatch
           // 这样后端基金代码匹配可以补全名字
           final baseClean = _v8Clean(nameOnly);
-          if (_v8IsValidName(baseClean) || (_fundCompanyNames.any((c) => baseClean.contains(c)) && baseClean.length >= 6)) {
-            debugPrint('[OCR-V8] Phase 1.5: incomplete but salvageable "$baseClean", deferring to Phase 2.6');
+          if (_v8IsValidName(baseClean) ||
+              (_fundCompanyNames.any((c) => baseClean.contains(c)) &&
+                  baseClean.length >= 6)) {
+            debugPrint(
+                '[OCR-V8] Phase 1.5: incomplete but salvageable "$baseClean", deferring to Phase 2.6');
             deferredHolding.add(_DeferredName(baseClean, amt, i, i));
           }
         }
@@ -911,7 +1209,10 @@ class OcrService {
       // 纯数字行（非锚点格式：非 ±数字% 也非 ±数字±数字%）
       if (RegExp(r'[\u4e00-\u9fa5]').hasMatch(line)) continue;
       if (line.contains('%')) continue;
-      if (!RegExp(r'^[+-]?\d[\d,]*\.\d{2}(?:[+-]\d[\d,]*\.\d{2})?$').hasMatch(line)) continue;
+      if (!RegExp(r'^[+-]?\d[\d,]*\.\d{2}(?:[+-]\d[\d,]*\.\d{2})?$')
+          .hasMatch(line)) {
+        continue;
+      }
 
       // 向前搜索基金名+金额
       String? fundName;
@@ -921,7 +1222,9 @@ class OcrService {
         final nl = lines[k].trim();
         if (nl.isEmpty || _isNoiseLine(nl) || _isHeaderLine(nl)) continue;
         if (RegExp(r'^[+-]\d[\d,]*\.\d{2}%').hasMatch(nl)) break;
-        if (_fundCompanyNames.any((c) => nl.contains(c)) && !_isPureAmountLine(nl) && !_isPureProfitLine(nl)) {
+        if (_fundCompanyNames.any((c) => nl.contains(c)) &&
+            !_isPureAmountLine(nl) &&
+            !_isPureProfitLine(nl)) {
           fundName ??= nl;
           final a = _extractAmountFromLine(nl);
           if (a != null && a >= 10 && amt == null) amt = a;
@@ -933,7 +1236,9 @@ class OcrService {
           if (fundName == null) {
             for (int pk = k - 1; pk >= 0 && pk >= k - 4; pk--) {
               final pn = lines[pk].trim();
-              if (_fundCompanyNames.any((c) => pn.contains(c)) && !_isPureAmountLine(pn) && !_isPureProfitLine(pn)) {
+              if (_fundCompanyNames.any((c) => pn.contains(c)) &&
+                  !_isPureAmountLine(pn) &&
+                  !_isPureProfitLine(pn)) {
                 fundName = pn;
                 break;
               }
@@ -944,9 +1249,18 @@ class OcrService {
 
       if (fundName != null && amt != null && amt >= 10) {
         final clean = _v8Clean(fundName);
-        if (_v8IsValidName(clean) && !holdings.any((h) => _isDuplicateName(h.name, clean))) {
+        if (_v8IsValidName(clean) &&
+            !holdings.any((h) => _isDuplicateName(h.name, clean))) {
           final (yp, hp, hpr) = _extractProfits(line, null);
-          holdings.add(RecognizedHolding(code: '', name: clean, amount: amt, yesterdayProfit: yp, holdingProfit: hp, holdingProfitRate: hpr, confidence: 0.5, needsCodeMatch: true));
+          holdings.add(RecognizedHolding(
+              code: '',
+              name: clean,
+              amount: amt,
+              yesterdayProfit: yp,
+              holdingProfit: hp,
+              holdingProfitRate: hpr,
+              confidence: 0.5,
+              needsCodeMatch: true));
         }
         usedIndices.add(i);
       }
@@ -964,7 +1278,11 @@ class OcrService {
       if (!_fundCompanyNames.any((c) => dl.contains(c))) continue;
 
       final nextLine = (i + 1 < lines.length) ? lines[i + 1].trim() : '';
-      if (!_isSuffixLine(nextLine) && !RegExp(r'^(?:ETF联接|QDII|LOF)[A-C]?(?:\([A-Z]+\))?[A-C]?$').hasMatch(nextLine)) continue;
+      if (!_isSuffixLine(nextLine) &&
+          !RegExp(r'^(?:ETF联接|QDII|LOF)[A-C]?(?:\([A-Z]+\))?[A-C]?$')
+              .hasMatch(nextLine)) {
+        continue;
+      }
 
       // 提取数据行前缀（金额之前的部分）
       final amountMatch = RegExp(r'[-]?(\d[\d,]*\.\d{2})').firstMatch(dl);
@@ -984,17 +1302,20 @@ class OcrService {
       if (_v8IsValidName(cleanName) && amt >= 10) {
         final (yp, hp, hpr) = _extractProfits(lines[i], dl);
         holdings.add(RecognizedHolding(
-          code: '', name: cleanName, amount: amt,
-          yesterdayProfit: yp, holdingProfit: hp, holdingProfitRate: hpr,
-          confidence: 0.5, needsCodeMatch: true,
+          code: '',
+          name: cleanName,
+          amount: amt,
+          yesterdayProfit: yp,
+          holdingProfit: hp,
+          holdingProfitRate: hpr,
+          confidence: 0.5,
+          needsCodeMatch: true,
         ));
         usedIndices.add(i);
         usedIndices.add(i + 1);
       }
     }
 
-
-    
     debugPrint('[OCR-V8] Entering Phase 2.5 (cross-line name join)...');
     // ===== Phase 2.5: 跨行基金名后缀拼接兜底 =====
     // 处理 MLKit 将基金名拆成两行的情况
@@ -1005,9 +1326,26 @@ class OcrService {
       if (line.isEmpty || _isNoiseLine(line) || _isHeaderLine(line)) continue;
       if (!_fundCompanyNames.any((c) => line.contains(c))) continue;
       // 检查当前行是否以不完整词结尾（如"综"、"装"、"健"）
-      final incompleteEndings = ['综', '装', '健', '联', '连', '增', '成', '新', '造', '技', '选', '工', '资', '先', '料', '赢'];
+      final incompleteEndings = [
+        '综',
+        '装',
+        '健',
+        '联',
+        '连',
+        '增',
+        '成',
+        '新',
+        '造',
+        '技',
+        '选',
+        '工',
+        '资',
+        '先',
+        '料',
+        '赢'
+      ];
       if (!incompleteEndings.any((e) => line.endsWith(e))) continue;
-      
+
       // 向后搜索拼接行
       for (int j = i + 1; j < lines.length && j <= i + 3; j++) {
         if (usedIndices.contains(j)) continue;
@@ -1015,16 +1353,34 @@ class OcrService {
         if (nl.isEmpty || _isNoiseLine(nl) || _isHeaderLine(nl)) break;
         // ★ V8.1: 含日文乱码的行不应作为拼接源
         if (RegExp(r'[\u3040-\u309F\u30A0-\u30FF龜國@]{2,}').hasMatch(nl)) break;
-        
+
         // 检查下一行是否以基金类型词开头（先去掉行首|等噪声）
         final nlClean = nl.replaceFirst(RegExp(r'^[|\\s]+'), '');
-        final typeWords = ['合', '台', '指数', '主题', '混合', 'ETF', '债券', '股票', '联接', '量化', '増强', '增强', '先锋', '健康', '优选', '制造'];
+        final typeWords = [
+          '合',
+          '台',
+          '指数',
+          '主题',
+          '混合',
+          'ETF',
+          '债券',
+          '股票',
+          '联接',
+          '量化',
+          '増强',
+          '增强',
+          '先锋',
+          '健康',
+          '优选',
+          '制造'
+        ];
         if (!typeWords.any((w) => nlClean.startsWith(w))) break;
-        
+
         // 拼接基金名（用清理后的行）
-        final combinedName = line + nlClean.replaceAll(RegExp(r'[+-]?\d[\d,]*\.\d{2}.*'), '').trim();
+        final combinedName = line +
+            nlClean.replaceAll(RegExp(r'[+-]?\d[\d,]*\.\d{2}.*'), '').trim();
         final clean = _v8Clean(combinedName);
-        
+
         // 从拼接行或再下一行提取金额
         double? amt;
         final amtFromNext = _extractAmountFromLine(nl);
@@ -1042,21 +1398,33 @@ class OcrService {
           for (int k = i - 1; k >= 0 && k >= i - 5; k--) {
             if (usedIndices.contains(k)) continue;
             final aboveLine = lines[k].trim();
-            if (aboveLine.isEmpty || _isNoiseLine(aboveLine) || _isHeaderLine(aboveLine)) continue;
+            if (aboveLine.isEmpty ||
+                _isNoiseLine(aboveLine) ||
+                _isHeaderLine(aboveLine)) {
+              continue;
+            }
             final a = _extractAmountFromLine(aboveLine);
-            if (a != null && a >= 10) { amt = a; break; }
+            if (a != null && a >= 10) {
+              amt = a;
+              break;
+            }
             if (_fundCompanyNames.any((c) => aboveLine.contains(c))) break;
           }
         }
-        
+
         if (amt != null && amt >= 10 && _v8IsValidName(clean)) {
           final isDup = holdings.any((h) => _isDuplicateName(h.name, clean));
           if (!isDup) {
             final (yp, hp, hpr) = _extractProfits(lines[i], null);
             holdings.add(RecognizedHolding(
-              code: '', name: clean, amount: amt,
-              yesterdayProfit: yp, holdingProfit: hp, holdingProfitRate: hpr,
-              confidence: 0.5, needsCodeMatch: true,
+              code: '',
+              name: clean,
+              amount: amt,
+              yesterdayProfit: yp,
+              holdingProfit: hp,
+              holdingProfitRate: hpr,
+              confidence: 0.5,
+              needsCodeMatch: true,
             ));
             usedIndices.add(i);
             usedIndices.add(j);
@@ -1070,29 +1438,56 @@ class OcrService {
     // 从锚点后搜索后缀行（如"锋混合C"、"产业主题ETF联接C"），拼回完整名
     for (final d in deferredHolding) {
       // 跳过明显非基金名的推迟项（如纯数字 "-1.8"）
-      if (!_fundCompanyNames.any((c) => d.name.contains(c)) && !RegExp(r'[\u4e00-\u9fff]{2,}').hasMatch(d.name)) continue;
+      if (!_fundCompanyNames.any((c) => d.name.contains(c)) &&
+          !RegExp(r'[\u4e00-\u9fff]{2,}').hasMatch(d.name)) {
+        continue;
+      }
 
       // 从锚点行向下搜索最多8行，找含基金类型词的行
-      for (int j = d.anchorIdx + 1; j < lines.length && j <= d.anchorIdx + 8; j++) {
+      for (int j = d.anchorIdx + 1;
+          j < lines.length && j <= d.anchorIdx + 8;
+          j++) {
         if (usedIndices.contains(j)) continue;
         final nextLine = lines[j].trim().replaceFirst(RegExp(r'^[|\\s]+'), '');
         if (nextLine.isEmpty) continue;
         // ★ V8.1: 资讯标题行跳过
         if (_isNoiseLine(nextLine)) continue;
         // 后缀行含基金类型词（用 contains 比 startsWith 更灵活，OCR后缀行可能不以类型词开头）
-        final typeWords = ['混合', '混台', '指数', '指教', 'ETF', '联接', '股票', '债券',
-          '量化', '増强', '增强', '先锋', '优选', '制造', '主题', '产业',
-          '金属', '锋', '康', '合', '台'];
+        final typeWords = [
+          '混合',
+          '混台',
+          '指数',
+          '指教',
+          'ETF',
+          '联接',
+          '股票',
+          '债券',
+          '量化',
+          '増强',
+          '增强',
+          '先锋',
+          '优选',
+          '制造',
+          '主题',
+          '产业',
+          '金属',
+          '锋',
+          '康',
+          '合',
+          '台'
+        ];
         if (!typeWords.any((w) => nextLine.contains(w))) continue;
         // 后缀行不应是另一个完整基金名（含公司名+类型词+ABCS后缀）
-        final isFullFundName = _fundCompanyNames.any((c) => nextLine.contains(c)) &&
-          RegExp(r'(混合|指数|ETF|股票|债券|联接)[ABC]?$').hasMatch(nextLine.replaceAll(RegExp(r'[+-]?\d[\d,]*\.\d{2}.*'), ''));
+        final isFullFundName =
+            _fundCompanyNames.any((c) => nextLine.contains(c)) &&
+                RegExp(r'(混合|指数|ETF|股票|债券|联接)[ABC]?$').hasMatch(
+                    nextLine.replaceAll(RegExp(r'[+-]?\d[\d,]*\.\d{2}.*'), ''));
         if (isFullFundName) continue;
         // 拼接：从后缀行提取纯名称部分（去掉金额和收益数据）
         var suffixPart = nextLine
-          .replaceAll(RegExp(r'[+-]?\d[\d,]*\.\d{2}.*'), '')  // 去金额/收益
-          .replaceAll(RegExp(r'^\d+[,.]\d+.*'), '')              // 去纯数字行残余
-          .trim();
+            .replaceAll(RegExp(r'[+-]?\d[\d,]*\.\d{2}.*'), '') // 去金额/收益
+            .replaceAll(RegExp(r'^\d+[,.]\d+.*'), '') // 去纯数字行残余
+            .trim();
         // 如果后缀行去金额后为空，尝试保留到第一个数字之前的部分
         if (suffixPart.isEmpty) {
           final beforeNum = RegExp(r'^(.*?)[+-]?\d').firstMatch(nextLine);
@@ -1100,7 +1495,8 @@ class OcrService {
         }
         // ★ V8.1: 后缀行乱码检测 — 含日文假名/特殊符号的行是垃圾拼接源
         if (RegExp(r'[\u3040-\u309F\u30A0-\u30FF龜國@]{2,}').hasMatch(nextLine)) {
-          debugPrint('[OCR-V8] Phase 2.6: skip garbage suffix line $j: "$nextLine"');
+          debugPrint(
+              '[OCR-V8] Phase 2.6: skip garbage suffix line $j: "$nextLine"');
           continue; // 不用 break，继续看下一行
         }
         if (suffixPart.isEmpty) continue;
@@ -1108,33 +1504,45 @@ class OcrService {
         if (RegExp(r'^\d{3,}$').hasMatch(suffixPart)) continue;
         // ★ OCR 变体规范化: 台→合, 指教→指数, (QDI1→(QDII
         var normSuffix = suffixPart
-          .replaceAll('台', '合')
-          .replaceAll('指教', '指数')
-          .replaceAll('(QDI1', '(QDII')
-          .replaceAll(')-LOF)', '-LOF)');
+            .replaceAll('台', '合')
+            .replaceAll('指教', '指数')
+            .replaceAll('(QDI1', '(QDII')
+            .replaceAll(')-LOF)', '-LOF)');
         // ★ 重叠检测: 基名尾与后缀头有重叠字符时去重
         // 如 "科技" + "技指数" → 重叠 "技" → "科技指数"
         var baseName = d.name;
-        for (int overlap = 1; overlap <= 3 && overlap < normSuffix.length && overlap < baseName.length; overlap++) {
+        for (int overlap = 1;
+            overlap <= 3 &&
+                overlap < normSuffix.length &&
+                overlap < baseName.length;
+            overlap++) {
           if (baseName.endsWith(normSuffix.substring(0, overlap))) {
             baseName = baseName.substring(0, baseName.length - overlap);
-            debugPrint('[OCR-V8] Phase 2.6: overlap detected, trimmed base to "$baseName"');
+            debugPrint(
+                '[OCR-V8] Phase 2.6: overlap detected, trimmed base to "$baseName"');
             break;
           }
         }
         final combinedName = baseName + normSuffix;
         final clean = _v8Clean(combinedName);
-        debugPrint('[OCR-V8] Phase 2.6 try: "${d.name}" + "$suffixPart" → "$clean" (line $j: "$nextLine")');
+        debugPrint(
+            '[OCR-V8] Phase 2.6 try: "${d.name}" + "$suffixPart" → "$clean" (line $j: "$nextLine")');
         if (_v8IsValidName(clean)) {
           final isDup = holdings.any((h) => _isDuplicateName(h.name, clean));
           if (!isDup) {
             holdings.add(RecognizedHolding(
-              code: '', name: clean, amount: d.amount,
-              yesterdayProfit: null, holdingProfit: null, holdingProfitRate: null,
-              confidence: 0.5, needsCodeMatch: true,
+              code: '',
+              name: clean,
+              amount: d.amount,
+              yesterdayProfit: null,
+              holdingProfit: null,
+              holdingProfitRate: null,
+              confidence: 0.5,
+              needsCodeMatch: true,
             ));
             usedIndices.add(j);
-            debugPrint('[OCR-V8] Phase 2.6: completed "${d.name}" → "$clean" using line $j');
+            debugPrint(
+                '[OCR-V8] Phase 2.6: completed "${d.name}" → "$clean" using line $j');
           } else {
             debugPrint('[OCR-V8] Phase 2.6: skip duplicate "$clean"');
           }
@@ -1149,12 +1557,21 @@ class OcrService {
     for (final d in deferredHolding) {
       if (completedNames.contains(d.name)) continue; // 已被 Phase 2.6 补全
       if (holdings.any((h) => _isDuplicateName(h.name, d.name))) continue;
-      if (!_fundCompanyNames.any((c) => d.name.contains(c)) && !RegExp(r'[\u4e00-\u9fa5]{4,}').hasMatch(d.name)) continue;
-      debugPrint('[OCR-V8] Phase 2.6 fallback: adding incomplete "${d.name}" amt=${d.amount} with needsCodeMatch');
+      if (!_fundCompanyNames.any((c) => d.name.contains(c)) &&
+          !RegExp(r'[\u4e00-\u9fa5]{4,}').hasMatch(d.name)) {
+        continue;
+      }
+      debugPrint(
+          '[OCR-V8] Phase 2.6 fallback: adding incomplete "${d.name}" amt=${d.amount} with needsCodeMatch');
       holdings.add(RecognizedHolding(
-        code: '', name: d.name, amount: d.amount,
-        yesterdayProfit: null, holdingProfit: null, holdingProfitRate: null,
-        confidence: 0.3, needsCodeMatch: true,
+        code: '',
+        name: d.name,
+        amount: d.amount,
+        yesterdayProfit: null,
+        holdingProfit: null,
+        holdingProfitRate: null,
+        confidence: 0.3,
+        needsCodeMatch: true,
       ));
     }
 
@@ -1168,10 +1585,14 @@ class OcrService {
         (m) => '${m[1]}${m[2]!.toUpperCase()}',
       );
       holdings[i] = RecognizedHolding(
-        code: h.code, name: name, amount: h.amount,
-        yesterdayProfit: h.yesterdayProfit, holdingProfit: h.holdingProfit,
+        code: h.code,
+        name: name,
+        amount: h.amount,
+        yesterdayProfit: h.yesterdayProfit,
+        holdingProfit: h.holdingProfit,
         holdingProfitRate: h.holdingProfitRate,
-        confidence: h.confidence, needsCodeMatch: h.needsCodeMatch,
+        confidence: h.confidence,
+        needsCodeMatch: h.needsCodeMatch,
       );
     }
     // ★ V8.2: 后缀碎片合并 — 同金额的「不完整名 + 后缀碎片名」→ 合并
@@ -1189,22 +1610,29 @@ class OcrService {
           final nameI = hi.name;
           final nameJ = hj.name;
           // 检测哪个是前缀碎片、哪个是后缀碎片
-          final suffixPattern = RegExp(r'^(金属|主题|产业|科技|先锋|制造|装备|新能源|低碳|有色|化工|光伏|电网|通信|细分|瑞享)(.*)(ETF|LOF|联接|混合|指数|股票|债券|增强|优选)(\\([^)]*\\))?[A-C]?$');
+          final suffixPattern = RegExp(
+              r'^(金属|主题|产业|科技|先锋|制造|装备|新能源|低碳|有色|化工|光伏|电网|通信|细分|瑞享)(.*)(ETF|LOF|联接|混合|指数|股票|债券|增强|优选)(\\([^)]*\\))?[A-C]?$');
           String? mergedName;
           if (suffixPattern.hasMatch(nameJ) && !suffixPattern.hasMatch(nameI)) {
             // j 是后缀碎片，i 是前缀碎片
             mergedName = _v8Clean(nameI + nameJ);
-          } else if (suffixPattern.hasMatch(nameI) && !suffixPattern.hasMatch(nameJ)) {
+          } else if (suffixPattern.hasMatch(nameI) &&
+              !suffixPattern.hasMatch(nameJ)) {
             // i 是后缀碎片，j 是前缀碎片
             mergedName = _v8Clean(nameJ + nameI);
           }
           if (mergedName != null && _v8IsValidName(mergedName)) {
-            debugPrint('[OCR-V8] V8.2 merge: "$nameI" + "$nameJ" → "$mergedName"');
+            debugPrint(
+                '[OCR-V8] V8.2 merge: "$nameI" + "$nameJ" → "$mergedName"');
             holdings[i] = RecognizedHolding(
-              code: hi.code, name: mergedName, amount: hi.amount,
-              yesterdayProfit: hi.yesterdayProfit, holdingProfit: hi.holdingProfit,
+              code: hi.code,
+              name: mergedName,
+              amount: hi.amount,
+              yesterdayProfit: hi.yesterdayProfit,
+              holdingProfit: hi.holdingProfit,
               holdingProfitRate: hi.holdingProfitRate,
-              confidence: 0.7, needsCodeMatch: true,
+              confidence: 0.7,
+              needsCodeMatch: true,
             );
             merged.add(j);
           }
@@ -1226,17 +1654,24 @@ class OcrService {
         final h = holdings[i];
         // 同金额 + 前缀碎片缺类型词
         if ((h.amount - sf.amount).abs() < 0.1) {
-          final hasTypeSuffix = RegExp(r'(混合|指数|股票|债券|ETF|LOF|QDII|联接|增强|优选|量化)(\\([^)]*\\))?[A-Ca-c]?$').hasMatch(h.name);
+          final hasTypeSuffix = RegExp(
+                  r'(混合|指数|股票|债券|ETF|LOF|QDII|联接|增强|优选|量化)(\\([^)]*\\))?[A-Ca-c]?$')
+              .hasMatch(h.name);
           if (!hasTypeSuffix) {
             // h 是前缀碎片，sf 是后缀碎片 → 拼接
             final trialName = _v8Clean(h.name + sf.name);
             if (_v8IsValidName(trialName)) {
-              debugPrint('[OCR-V8] V8.3 suffix merge: "${h.name}" + "${sf.name}" → "$trialName"');
+              debugPrint(
+                  '[OCR-V8] V8.3 suffix merge: "${h.name}" + "${sf.name}" → "$trialName"');
               holdings[i] = RecognizedHolding(
-                code: h.code, name: trialName, amount: h.amount,
-                yesterdayProfit: h.yesterdayProfit, holdingProfit: h.holdingProfit,
+                code: h.code,
+                name: trialName,
+                amount: h.amount,
+                yesterdayProfit: h.yesterdayProfit,
+                holdingProfit: h.holdingProfit,
                 holdingProfitRate: h.holdingProfitRate,
-                confidence: 0.7, needsCodeMatch: true,
+                confidence: 0.7,
+                needsCodeMatch: true,
               );
               matched = true;
               break;
@@ -1246,11 +1681,13 @@ class OcrService {
       }
       if (!matched) {
         // 后缀碎片没匹配到，单独加入（needsCodeMatch=true）
-        debugPrint('[OCR-V8] V8.3 suffix fragment unmatched: "${sf.name}" amt=${sf.amount}');
+        debugPrint(
+            '[OCR-V8] V8.3 suffix fragment unmatched: "${sf.name}" amt=${sf.amount}');
       }
     }
     for (int i = 0; i < holdings.length; i++) {
-      debugPrint('[OCR-V8]   #$i: ${holdings[i].name} amt=${holdings[i].amount}');
+      debugPrint(
+          '[OCR-V8]   #$i: ${holdings[i].name} amt=${holdings[i].amount}');
     }
     return holdings;
   }
@@ -1266,27 +1703,40 @@ class OcrService {
     s = s.replaceAll(',', ''); // Y坐标合并逗号噪声
     s = s.replaceAll(RegExp(r'\s+'), '');
     // ★ V8.2: 繁体→简体归一化（OCR常见误识）
-    s = s.replaceAll('運', '运').replaceAll('見', '见').replaceAll('選', '选')
-          .replaceAll('題', '题').replaceAll('聯', '联').replaceAll('產', '产')
-          .replaceAll('業', '业').replaceAll('備', '备').replaceAll('裝', '装')
-          .replaceAll('質', '质').replaceAll('網', '网').replaceAll('電', '电')
-          .replaceAll('設', '设').replaceAll('備', '备').replaceAll('債', '债')
-          .replaceAll('贏', '赢').replaceAll('増', '增');
+    s = s
+        .replaceAll('運', '运')
+        .replaceAll('見', '见')
+        .replaceAll('選', '选')
+        .replaceAll('題', '题')
+        .replaceAll('聯', '联')
+        .replaceAll('產', '产')
+        .replaceAll('業', '业')
+        .replaceAll('備', '备')
+        .replaceAll('裝', '装')
+        .replaceAll('質', '质')
+        .replaceAll('網', '网')
+        .replaceAll('電', '电')
+        .replaceAll('設', '设')
+        .replaceAll('備', '备')
+        .replaceAll('債', '债')
+        .replaceAll('贏', '赢')
+        .replaceAll('増', '增');
 
     // ★ V8.1: 去除日文乱码片段（ル、キ、國、龜、@ 等不应出现在基金名中）
     // 去掉 CJK 扩展区/日文假名/特殊符号
-    s = s.replaceAll(RegExp(r'[\u3040-\u309F\u30A0-\u30FF\uFF65-\uFF9F@龜國]+'), '');
+    s = s.replaceAll(
+        RegExp(r'[\u3040-\u309F\u30A0-\u30FF\uFF65-\uFF9F@龜國]+'), '');
 
     // ★ V8.2: OCR 常见单字误识修正
-    s = s.replaceAll('I业', '工业');  // 大写 I 被误识为 工
-    s = s.replaceAll('高瑞', '高端');  // 瑞/端 形近
-    s = s.replaceAll('同奉', '同泰');  // 奉/泰 形近
-    s = s.replaceAll('运见', '远见');  // 运/远 形近（广发远见智选混合）
-    s = s.replaceAll('在题', '主题');  // 在/主 形近
-    s = s.replaceAll('FTF', 'ETF');   // F/E 形近
-    s = s.replaceAll('综台', '综合');  // 台/合 形近
-    s = s.replaceAll('瑞亨', '瑞享');  // 亨/享 形近
-    s = s.replaceAll('利技', '科技');  // 利/科 形近
+    s = s.replaceAll('I业', '工业'); // 大写 I 被误识为 工
+    s = s.replaceAll('高瑞', '高端'); // 瑞/端 形近
+    s = s.replaceAll('同奉', '同泰'); // 奉/泰 形近
+    s = s.replaceAll('运见', '远见'); // 运/远 形近（广发远见智选混合）
+    s = s.replaceAll('在题', '主题'); // 在/主 形近
+    s = s.replaceAll('FTF', 'ETF'); // F/E 形近
+    s = s.replaceAll('综台', '综合'); // 台/合 形近
+    s = s.replaceAll('瑞亨', '瑞享'); // 亨/享 形近
+    s = s.replaceAll('利技', '科技'); // 利/科 形近
     s = s.replaceAllMapped(
       RegExp(r'标普生物料'),
       (m) => '标普生物科技',
@@ -1310,7 +1760,8 @@ class OcrService {
     s = s.replaceAllMapped(
       RegExp(r'QDI[LlI1]*(\)|）)?([A-C])?'),
       (m) {
-        final hasOpenParen = m.start > 0 && RegExp(r'[\(（]').hasMatch(s[m.start - 1]);
+        final hasOpenParen =
+            m.start > 0 && RegExp(r'[\(（]').hasMatch(s[m.start - 1]);
         final closeParen = m[1] ?? (hasOpenParen ? ')' : '');
         final suffix = m[2] ?? '';
         return 'QDII$closeParen$suffix';
@@ -1328,9 +1779,13 @@ class OcrService {
     if (!RegExp(r'[\u4e00-\u9fa5]').hasMatch(name)) return false;
     if (!_fundCompanyNames.any((c) => name.contains(c))) return false;
     // 完整后缀关键词
-    if (RegExp(r'^(混合|指数|股票|债券|ETF|LOF|QDII|联接)[A-C]?$').hasMatch(name)) return false;
+    if (RegExp(r'^(混合|指数|股票|债券|ETF|LOF|QDII|联接)[A-C]?$').hasMatch(name)) {
+      return false;
+    }
     // 单字符纯类别后缀：混/指/股/债/联 + 可选字母/数字后缀
-    if (RegExp(r'^[混合指数股票债券ETFLOFQDII联接]+[A-C0-9]?$').hasMatch(name)) return false;
+    if (RegExp(r'^[混合指数股票债券ETFLOFQDII联接]+[A-C0-9]?$').hasMatch(name)) {
+      return false;
+    }
     // ★ V8.1: 检测日文乱码 — 含假名字符的名称无效
     if (RegExp(r'[\u3040-\u309F\u30A0-\u30FF]').hasMatch(name)) return false;
     // ★ V8.1: 检测拼接垃圾 — 含"指数教基金國"等非基金名词性组合
@@ -1362,8 +1817,8 @@ class OcrService {
 
       double? amount = _extractAmountFromLine(line);
       String name = '';
-      final nameMatch =
-          RegExp(r'([\u4e00-\u9fa5][\u4e00-\u9fa5A-Za-z0-9]{2,})').firstMatch(line);
+      final nameMatch = RegExp(r'([\u4e00-\u9fa5][\u4e00-\u9fa5A-Za-z0-9]{2,})')
+          .firstMatch(line);
       if (nameMatch != null) name = _cleanFundName(nameMatch.group(1)!);
 
       if (amount == null || amount < 1) {
@@ -1379,16 +1834,21 @@ class OcrService {
 
       if (amount != null && amount >= 1) {
         holdings.add(RecognizedHolding(
-          code: code, name: name, amount: amount,
-          yesterdayProfit: null, holdingProfit: null, holdingProfitRate: null,
-          confidence: 0.8, needsCodeMatch: name.isEmpty,
+          code: code,
+          name: name,
+          amount: amount,
+          yesterdayProfit: null,
+          holdingProfit: null,
+          holdingProfitRate: null,
+          confidence: 0.8,
+          needsCodeMatch: name.isEmpty,
         ));
       }
     }
 
     if (holdings.isEmpty) return _parseGeneric(lines);
 
-        return holdings;
+    return holdings;
   }
 
   // ============================================================
@@ -1410,9 +1870,14 @@ class OcrService {
             final name = _cleanFundName(nameMatch.group(1)!);
             if (name.length >= 4) {
               holdings.add(RecognizedHolding(
-                code: '', name: name, amount: amount,
-                yesterdayProfit: null, holdingProfit: null, holdingProfitRate: null,
-                confidence: 0.3, needsCodeMatch: true,
+                code: '',
+                name: name,
+                amount: amount,
+                yesterdayProfit: null,
+                holdingProfit: null,
+                holdingProfitRate: null,
+                confidence: 0.3,
+                needsCodeMatch: true,
               ));
             }
           }
@@ -1420,7 +1885,7 @@ class OcrService {
       }
     }
 
-        return holdings;
+    return holdings;
   }
 
   // ============================================================
@@ -1446,7 +1911,9 @@ class OcrService {
     }
 
     return RecognizedHolding(
-      code: code, name: name, amount: amount,
+      code: code,
+      name: name,
+      amount: amount,
       confidence: code.isNotEmpty ? 0.8 : 0.4,
       needsCodeMatch: code.isEmpty,
     );
@@ -1532,7 +1999,7 @@ class OcrService {
   static bool _isNoiseLine(String line) {
     // 含金额的行一定是有效数据行，跳过噪声检测
     if (_hasAmount(line)) return false;
-    
+
     for (final kw in _noiseKeywords) {
       if (line.contains(kw)) return true;
     }
@@ -1587,7 +2054,8 @@ class OcrService {
     if (yenMatch != null) return _parseAmount(yenMatch.group(1)!);
 
     // 千分位格式 (1,234.56) → 优先
-    final commaMatch = RegExp(r'\b(\d{1,3}(?:,\d{3})+\.\d{2})\b').firstMatch(line);
+    final commaMatch =
+        RegExp(r'\b(\d{1,3}(?:,\d{3})+\.\d{2})\b').firstMatch(line);
     if (commaMatch != null) return _parseAmount(commaMatch.group(1)!);
 
     // 通用: 找到所有 XXXX.XX 模式，取第一个 ≥10 且不在%后的
@@ -1601,7 +2069,9 @@ class OcrService {
         final prev = line[start - 1];
         if (prev == '-' || prev == '+') {
           // 检查是否是 "字母-金额" 模式（如 C-129.33）→ 前面是字母则有效
-          if (start < 2 || !RegExp(r'[A-Za-z]').hasMatch(line[start - 2])) continue;
+          if (start < 2 || !RegExp(r'[A-Za-z]').hasMatch(line[start - 2])) {
+            continue;
+          }
         }
       }
       final parsed = _parseAmount(m.group(1)!);
@@ -1643,7 +2113,8 @@ class OcrService {
   /// X聚类：检测列边界
   /// 支付宝持仓截图固定4列布局：基金名 | 金额 | 昨日收益 | 收益率%
   /// 返回按left排序的列列表，null表示检测失败
-  static List<_V9Column>? _v9DetectColumns(List<OcrBlock> blocks, double imageWidth) {
+  static List<_V9Column>? _v9DetectColumns(
+      List<OcrBlock> blocks, double imageWidth) {
     if (blocks.isEmpty) return null;
 
     // ===== 直方图法列检测 =====
@@ -1665,7 +2136,10 @@ class OcrService {
 
     for (int i = 0; i < numBins; i++) {
       if (histogram[i] <= threshold) {
-        if (!inGap) { gapStart = i; inGap = true; }
+        if (!inGap) {
+          gapStart = i;
+          inGap = true;
+        }
       } else {
         if (inGap) {
           final gapMidX = ((gapStart + i) / 2) * binWidth;
@@ -1704,7 +2178,8 @@ class OcrService {
         return b.centerx >= colLeft && b.centerx < colRight;
       }).toList();
       if (members.isEmpty) continue;
-      final centroid = members.map((b) => b.centerx).reduce((a, b) => a + b) / members.length;
+      final centroid = members.map((b) => b.centerx).reduce((a, b) => a + b) /
+          members.length;
       columns.add(_V9Column(
         index: i,
         left: colLeft,
@@ -1719,7 +2194,8 @@ class OcrService {
       // 重新赋值index
     }
 
-    debugPrint('[OCR-V9] Columns: ${columns.map((c) => "Col${c.index}: ${c.left.toInt()}-${c.right.toInt()} centroid=${c.centroid.toInt()}").join(" | ")}');
+    debugPrint(
+        '[OCR-V9] Columns: ${columns.map((c) => "Col${c.index}: ${c.left.toInt()}-${c.right.toInt()} centroid=${c.centroid.toInt()}").join(" | ")}');
 
     // 至少3列才有效
     if (columns.length < 3) return null;
@@ -1734,7 +2210,8 @@ class OcrService {
     // 计算所有block的高度
     final heights = blocks.map((b) => b.bottom - b.top).toList();
     heights.sort();
-    final medianHeight = heights.isNotEmpty ? heights[heights.length ~/ 2] : 30.0;
+    final medianHeight =
+        heights.isNotEmpty ? heights[heights.length ~/ 2] : 30.0;
     // 行间距阈值：中位行高的60%（比V8合并的40%更宽松）
     final rowThreshold = medianHeight * 0.6;
 
@@ -1747,13 +2224,16 @@ class OcrService {
     _V9Row? currentRow;
 
     for (final block in sorted) {
-      if (currentRow == null || (block.centery - currentRow.centery).abs() > rowThreshold) {
+      if (currentRow == null ||
+          (block.centery - currentRow.centery).abs() > rowThreshold) {
         currentRow = _V9Row(blocks: [], centery: block.centery);
         rows.add(currentRow);
       }
       currentRow.blocks.add(block);
       // 更新行的centerY为平均（加权）
-      currentRow.centery = currentRow.blocks.map((b) => b.centery).reduce((a, b) => a + b) / currentRow.blocks.length;
+      currentRow.centery =
+          currentRow.blocks.map((b) => b.centery).reduce((a, b) => a + b) /
+              currentRow.blocks.length;
     }
 
     return rows;
@@ -1767,21 +2247,26 @@ class OcrService {
     List<_V9Column> columns,
   ) {
     final matrix = List.generate(
-      rows.length, (_) => List.generate(columns.length, (_) => ''),
+      rows.length,
+      (_) => List.generate(columns.length, (_) => ''),
     );
 
     for (final block in blocks) {
       // 找到所属行
       int? rowIndex;
       for (int r = 0; r < rows.length; r++) {
-        if (rows[r].blocks.contains(block)) { rowIndex = r; break; }
+        if (rows[r].blocks.contains(block)) {
+          rowIndex = r;
+          break;
+        }
       }
       if (rowIndex == null) continue;
 
       // 找到所属列（block中心点落在哪列范围内）
       int? colIndex;
       for (int c = 0; c < columns.length; c++) {
-        if (block.centerx >= columns[c].left && block.centerx <= columns[c].right) {
+        if (block.centerx >= columns[c].left &&
+            block.centerx <= columns[c].right) {
           colIndex = c;
           break;
         }
@@ -1806,14 +2291,27 @@ class OcrService {
 
   /// 检测噪声文本（广告、推广、UI元素等）
   static bool _v9IsNoiseText(String text) {
-    const noiseKeywords = ['基金经理', '看好', '赛道', '稳健理财', '灵活申赎', '推荐', '热门', '新发', '理财', '申赎'];
+    const noiseKeywords = [
+      '基金经理',
+      '看好',
+      '赛道',
+      '稳健理财',
+      '灵活申赎',
+      '推荐',
+      '热门',
+      '新发',
+      '理财',
+      '申赎'
+    ];
     for (final kw in noiseKeywords) {
       if (text.contains(kw)) return true;
     }
     // 纯数字+标点（总资产等）
     if (RegExp(r'^[\d,.+\-()\s%]+$').hasMatch(text)) return true;
     // 太长且无中文
-    if (text.length > 20 && !RegExp(r'[\u4e00-\u9fff]').hasMatch(text)) return true;
+    if (text.length > 20 && !RegExp(r'[\u4e00-\u9fff]').hasMatch(text)) {
+      return true;
+    }
     return false;
   }
 
@@ -1905,8 +2403,10 @@ class OcrService {
           if (matrix[r][c].isNotEmpty) sample.add(matrix[r][c]);
         }
         final joined = sample.join(' ');
-        final plainCount = RegExp(r'(?<![+-])\d[\d,]*\.\d{2}').allMatches(joined).length;
-        final signedCount = RegExp(r'[+-]\d[\d,]*\.\d{2}').allMatches(joined).length;
+        final plainCount =
+            RegExp(r'(?<![+-])\d[\d,]*\.\d{2}').allMatches(joined).length;
+        final signedCount =
+            RegExp(r'[+-]\d[\d,]*\.\d{2}').allMatches(joined).length;
         if (plainCount > signedCount) {
           amountCol = c;
           break;
@@ -1915,7 +2415,8 @@ class OcrService {
       if (amountCol < 0) amountCol = 1; // fallback
     }
 
-    debugPrint('[OCR-V9] 布局: ${is3ColLayout ? "3列" : "${columns.length}列"}, rateCol=$rateCol, amountCol=$amountCol');
+    debugPrint(
+        '[OCR-V9] 布局: ${is3ColLayout ? "3列" : "${columns.length}列"}, rateCol=$rateCol, amountCol=$amountCol');
 
     // ===== 逐行扫描：找 rate 行（含有 % 的行）=====
     for (int r = 0; r < matrix.length; r++) {
@@ -1934,7 +2435,8 @@ class OcrService {
         // 3 列：amount 在 row-1（同一基金的上一行，rateCol-1 = amount+profit 混合列）
         final aboveRow = r - 1;
         if (aboveRow >= 0 && !usedRows.contains(aboveRow)) {
-          final mixedCol = matrix[aboveRow][rateCol - 1].trim().replaceAll(',', '');
+          final mixedCol =
+              matrix[aboveRow][rateCol - 1].trim().replaceAll(',', '');
           // 混合列包含 amount（纯正数开头） + profit（±号开头）
           // 取第一个未带 ± 号的数字作为 amount
           final amtMatch = RegExp(r'^(\d+\.\d{2})').firstMatch(mixedCol);
@@ -1956,7 +2458,8 @@ class OcrService {
       // 3 列 fallback：amount 可能未在 row-1 找到，尝试从 name 列合并字段提取
       if ((amount == null || amount < 1) && is3ColLayout && r > 0) {
         final aboveName = matrix[r - 1][nameCol].trim();
-        final merged = RegExp(r'^(.+?)\s+(\d[\d,]+\.\d{2})$').firstMatch(aboveName);
+        final merged =
+            RegExp(r'^(.+?)\s+(\d[\d,]+\.\d{2})$').firstMatch(aboveName);
         if (merged != null) {
           amount = double.tryParse(merged.group(2)!.replaceAll(',', ''));
         }
@@ -1964,7 +2467,8 @@ class OcrService {
       // 3 列：也尝试从 row-1 rateCol-1 提取
       if ((amount == null || amount < 1) && is3ColLayout && r > 0) {
         final mixedCol = matrix[r - 1][rateCol - 1].trim();
-        final amtMatch = RegExp(r'(\d[\d,]+\.\d{2})').firstMatch(mixedCol.replaceAll(',', ''));
+        final amtMatch = RegExp(r'(\d[\d,]+\.\d{2})')
+            .firstMatch(mixedCol.replaceAll(',', ''));
         if (amtMatch != null) {
           amount = double.tryParse(amtMatch.group(1)!);
         }
@@ -1984,7 +2488,8 @@ class OcrService {
           var aboveNameCell = matrix[aboveRow][nameCol].trim();
           // 检查是否 name+amount 合并
           if (aboveNameCell.isNotEmpty) {
-            final merged = RegExp(r'^(.+?)\s+(\d[\d,]+\.\d{2})$').firstMatch(aboveNameCell);
+            final merged = RegExp(r'^(.+?)\s+(\d[\d,]+\.\d{2})$')
+                .firstMatch(aboveNameCell);
             if (merged != null) {
               aboveNameCell = merged.group(1)!;
             }
@@ -1997,7 +2502,8 @@ class OcrService {
         var currentNameCell = matrix[r][nameCol].trim();
         if (currentNameCell.isNotEmpty) {
           // 去掉前缀符号（如 "台" → "台"，有时有 "|"）
-          currentNameCell = currentNameCell.replaceFirst(RegExp(r'^\|'), '').trim();
+          currentNameCell =
+              currentNameCell.replaceFirst(RegExp(r'^\|'), '').trim();
           if (!_v9IsNoiseText(currentNameCell)) {
             nameParts.add(currentNameCell);
           }
@@ -2030,7 +2536,8 @@ class OcrService {
       fundName = _applyOcrCorrections(fundName);
 
       if (!_v8IsValidName(fundName)) {
-        if (_fundCompanyNames.any((c) => fundName.contains(c)) && fundName.length >= 4) {
+        if (_fundCompanyNames.any((c) => fundName.contains(c)) &&
+            fundName.length >= 4) {
           debugPrint('[OCR-V9] 宽松通过: "$fundName"');
         } else {
           debugPrint('[OCR-V9] 无效名称跳过: "$fundName" (row $r)');
@@ -2055,7 +2562,8 @@ class OcrService {
         confidence: 0.8,
         needsCodeMatch: true,
       ));
-      debugPrint('[OCR-V9] 提取: "$fundName" amt=$amount rate=${rateValue.toStringAsFixed(2)}%');
+      debugPrint(
+          '[OCR-V9] 提取: "$fundName" amt=$amount rate=${rateValue.toStringAsFixed(2)}%');
 
       // 标记已使用的行
       if (is3ColLayout && r > 0) usedRows.add(r - 1);

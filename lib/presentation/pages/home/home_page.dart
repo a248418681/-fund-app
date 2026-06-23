@@ -36,7 +36,8 @@ class _HomePageState extends State<HomePage> {
             }
 
             return RefreshIndicator(
-              onRefresh: () async => context.read<HomeBloc>().add(HomeRefresh()),
+              onRefresh: () async =>
+                  context.read<HomeBloc>().add(HomeRefresh()),
               child: CustomScrollView(
                 slivers: [
                   _buildHeader(context),
@@ -67,11 +68,12 @@ class _HomePageState extends State<HomePage> {
         ),
         child: Row(
           children: [
-            const Text('基金宝', style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.primary,
-            )),
+            const Text('基金宝',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primary,
+                )),
             const Spacer(),
             IconButton(
               icon: const Icon(Icons.campaign_outlined),
@@ -117,7 +119,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildMarketOverview(HomeState state) {
-    if (state.indices.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+    if (state.indices.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
 
     return SliverToBoxAdapter(
       child: Container(
@@ -137,18 +141,24 @@ class _HomePageState extends State<HomePage> {
                 Row(
                   children: [
                     Container(
-                      width: 6, height: 6,
+                      width: 6,
+                      height: 6,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: _isTrading() ? AppTheme.downColor : AppTheme.textMuted,
+                        color: _isTrading()
+                            ? AppTheme.downColor
+                            : AppTheme.textMuted,
                       ),
                     ),
                     const SizedBox(width: 6),
-                    const Text('大盘指数', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    const Text('大盘指数',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w600)),
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: _isTrading()
                         ? AppTheme.downColor.withValues(alpha: 0.1)
@@ -159,7 +169,9 @@ class _HomePageState extends State<HomePage> {
                     _isTrading() ? '交易中' : '已收盘',
                     style: TextStyle(
                       fontSize: 11,
-                      color: _isTrading() ? AppTheme.downColor : AppTheme.textSecondary,
+                      color: _isTrading()
+                          ? AppTheme.downColor
+                          : AppTheme.textSecondary,
                     ),
                   ),
                 ),
@@ -170,7 +182,10 @@ class _HomePageState extends State<HomePage> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2, childAspectRatio: 1.8, crossAxisSpacing: 8, mainAxisSpacing: 8,
+                crossAxisCount: 2,
+                childAspectRatio: 1.8,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
               ),
               itemCount: state.indices.length,
               itemBuilder: (context, idx) {
@@ -194,16 +209,24 @@ class _HomePageState extends State<HomePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(index.name, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                        Text(index.name,
+                            style: const TextStyle(
+                                fontSize: 12, color: AppTheme.textSecondary)),
                         Text(
                           index.current.toStringAsFixed(2),
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold,
-                            color: isUp ? AppTheme.upColor : AppTheme.downColor),
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  isUp ? AppTheme.upColor : AppTheme.downColor),
                         ),
                         Text(
                           '${isUp ? '+' : ''}${index.changeRate.toStringAsFixed(2)}%',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
-                            color: isUp ? AppTheme.upColor : AppTheme.downColor),
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color:
+                                  isUp ? AppTheme.upColor : AppTheme.downColor),
                         ),
                       ],
                     ),
@@ -244,13 +267,17 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('快捷功能', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            const Text('快捷功能',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4, childAspectRatio: 1.2, crossAxisSpacing: 6, mainAxisSpacing: 6,
+                crossAxisCount: 4,
+                childAspectRatio: 1.2,
+                crossAxisSpacing: 6,
+                mainAxisSpacing: 6,
               ),
               itemCount: actions.length,
               itemBuilder: (context, idx) {
@@ -262,7 +289,8 @@ class _HomePageState extends State<HomePage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        width: 40, height: 40,
+                        width: 40,
+                        height: 40,
                         decoration: BoxDecoration(
                           color: AppTheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
@@ -270,7 +298,9 @@ class _HomePageState extends State<HomePage> {
                         child: Icon(icon, color: AppTheme.primary, size: 20),
                       ),
                       const SizedBox(height: 4),
-                      Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                      Text(label,
+                          style: const TextStyle(
+                              fontSize: 11, color: AppTheme.textSecondary)),
                     ],
                   ),
                 );
@@ -283,7 +313,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildNewsSection(HomeState state) {
-    if (state.news.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+    if (state.news.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
 
     return SliverToBoxAdapter(
       child: Container(
@@ -301,10 +333,14 @@ class _HomePageState extends State<HomePage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('财经资讯', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  const Text('财经资讯',
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                   GestureDetector(
                     onTap: () => context.push('/news'),
-                    child: const Text('更多 >', style: TextStyle(fontSize: 12, color: AppTheme.primary)),
+                    child: const Text('更多 >',
+                        style:
+                            TextStyle(fontSize: 12, color: AppTheme.primary)),
                   ),
                 ],
               ),
@@ -313,7 +349,8 @@ class _HomePageState extends State<HomePage> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: state.news.length > 5 ? 5 : state.news.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, indent: 14, endIndent: 14),
+              separatorBuilder: (_, __) =>
+                  const Divider(height: 1, indent: 14, endIndent: 14),
               itemBuilder: (context, idx) {
                 final news = state.news[idx];
                 return ListTile(
@@ -324,7 +361,8 @@ class _HomePageState extends State<HomePage> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  subtitle: Text('${news.source} · ${news.time}', style: const TextStyle(fontSize: 11)),
+                  subtitle: Text('${news.source} · ${news.time}',
+                      style: const TextStyle(fontSize: 11)),
                   trailing: const Icon(Icons.chevron_right, size: 16),
                   onTap: () => context.push('/news'),
                 );
@@ -347,12 +385,14 @@ class _HomePageState extends State<HomePage> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Text('最后刷新: ${state.lastRefreshTime}',
-                  style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                    style: const TextStyle(
+                        fontSize: 11, color: AppTheme.textMuted)),
               ),
             if (state.watchlist.isEmpty)
               _buildEmptyWatchlist(context)
             else
-              ...state.watchlist.map((item) => _buildWatchlistItem(context, item)),
+              ...state.watchlist
+                  .map((item) => _buildWatchlistItem(context, item)),
             const SizedBox(height: 80),
           ],
         ),
@@ -372,7 +412,8 @@ class _HomePageState extends State<HomePage> {
         children: [
           const Icon(Icons.search, size: 48, color: AppTheme.textMuted),
           const SizedBox(height: 12),
-          const Text('暂无自选基金', style: TextStyle(fontSize: 15, color: AppTheme.textSecondary)),
+          const Text('暂无自选基金',
+              style: TextStyle(fontSize: 15, color: AppTheme.textSecondary)),
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () => _showSearchSheet(context),
@@ -409,12 +450,14 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       Flexible(
                         child: Text(item.name.isEmpty ? item.code : item.name,
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                          overflow: TextOverflow.ellipsis),
+                            style: const TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis),
                       ),
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 1),
                         decoration: BoxDecoration(
                           color: item.dataSource == 'nav'
                               ? Colors.blue.withValues(alpha: 0.1)
@@ -423,14 +466,19 @@ class _HomePageState extends State<HomePage> {
                         ),
                         child: Text(
                           item.dataSource == 'nav' ? '净值' : '估值',
-                          style: TextStyle(fontSize: 9, color: item.dataSource == 'nav'
-                              ? Colors.blue : Colors.orange),
+                          style: TextStyle(
+                              fontSize: 9,
+                              color: item.dataSource == 'nav'
+                                  ? Colors.blue
+                                  : Colors.orange),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 2),
-                  Text(item.code, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                  Text(item.code,
+                      style: const TextStyle(
+                          fontSize: 11, color: AppTheme.textMuted)),
                 ],
               ),
             ),
@@ -439,14 +487,18 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Text(
                   item.estimateValue ?? '--',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   '${isFlat ? '' : (isUp ? '+' : '')}${item.estimateChange ?? '--'}%',
                   style: TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w600,
-                    color: isFlat ? AppTheme.flatColor : (isUp ? AppTheme.upColor : AppTheme.downColor),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isFlat
+                        ? AppTheme.flatColor
+                        : (isUp ? AppTheme.upColor : AppTheme.downColor),
                   ),
                 ),
               ],
@@ -466,7 +518,9 @@ class _HomePageState extends State<HomePage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('设置提醒 - ${item.name}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text('设置提醒 - ${item.name}',
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             ListTile(
               leading: const Icon(Icons.trending_up),
@@ -509,4 +563,3 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
-

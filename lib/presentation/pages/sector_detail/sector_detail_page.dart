@@ -32,8 +32,15 @@ class SectorDetailPage extends StatelessWidget {
   }
 }
 
-class _SectorDetailView extends StatelessWidget {
+class _SectorDetailView extends StatefulWidget {
   const _SectorDetailView();
+
+  @override
+  State<_SectorDetailView> createState() => _SectorDetailViewState();
+}
+
+class _SectorDetailViewState extends State<_SectorDetailView> {
+  bool _stocksExpanded = false; // 成分股默认折叠
 
   @override
   Widget build(BuildContext context) {
@@ -66,16 +73,18 @@ class _SectorDetailView extends StatelessWidget {
             const Icon(Icons.cloud_off, size: 48, color: AppTheme.textMuted),
             const SizedBox(height: 12),
             Text(state.errorMessage ?? '加载失败',
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                style: const TextStyle(
+                    color: AppTheme.textSecondary, fontSize: 14)),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => context.read<SectorDetailBloc>().add(SectorDetailLoad(
-                    code: state.sectorCode,
-                    name: state.sectorName,
-                    price: state.sectorPrice,
-                    changePercent: state.sectorChangePercent,
-                    change: state.sectorChange,
-                  )),
+              onPressed: () =>
+                  context.read<SectorDetailBloc>().add(SectorDetailLoad(
+                        code: state.sectorCode,
+                        name: state.sectorName,
+                        price: state.sectorPrice,
+                        changePercent: state.sectorChangePercent,
+                        change: state.sectorChange,
+                      )),
               child: const Text('重试'),
             ),
           ],
@@ -91,15 +100,8 @@ class _SectorDetailView extends StatelessWidget {
         // ── 顶部概览卡片 ──
         _buildHeaderCard(state, color),
         const SizedBox(height: 20),
-        // ── 成分股区域 ──
-        _buildSectionHeader(
-          title: '成分股',
-          count: state.stocks.length,
-          icon: Icons.bar_chart_outlined,
-        ),
-        const SizedBox(height: 8),
-        _buildConstituentHeader(),
-        ..._buildConstituentList(state),
+        // ── 成分股区域（可折叠） ──
+        _buildCollapsibleStocksSection(state),
         const SizedBox(height: 24),
         // ── 相关基金区域 ──
         if (state.funds.isNotEmpty) ...[
@@ -110,11 +112,74 @@ class _SectorDetailView extends StatelessWidget {
             subtitle: state.funds.where((f) => f.hasEstimate).isNotEmpty
                 ? '${state.funds.where((f) => f.hasEstimate).length} 只有估值'
                 : null,
+            sortBar: _buildEstimateSortToggle(context, state),
           ),
           const SizedBox(height: 8),
           ..._buildFundList(context, state),
         ],
         const SizedBox(height: 80),
+      ],
+    );
+  }
+
+  // ── 可折叠成分股区域 ──
+  Widget _buildCollapsibleStocksSection(SectorDetailState state) {
+    return Column(
+      children: [
+        // 点击展开/收起
+        InkWell(
+          onTap: () => setState(() => _stocksExpanded = !_stocksExpanded),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                const Icon(Icons.bar_chart_outlined,
+                    size: 16, color: AppTheme.primary),
+                const SizedBox(width: 6),
+                const Text('成分股',
+                    style:
+                        TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text('${state.stocks.length}',
+                      style: const TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.primary,
+                          fontWeight: FontWeight.w600)),
+                ),
+                const Spacer(),
+                AnimatedRotation(
+                  turns: _stocksExpanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: const Icon(Icons.keyboard_arrow_down,
+                      size: 20, color: AppTheme.textMuted),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // 展开内容
+        AnimatedCrossFade(
+          firstChild: const SizedBox.shrink(),
+          secondChild: Column(
+            children: [
+              const SizedBox(height: 8),
+              _buildConstituentHeader(),
+              ..._buildConstituentList(state),
+            ],
+          ),
+          crossFadeState: _stocksExpanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 250),
+        ),
       ],
     );
   }
@@ -125,6 +190,7 @@ class _SectorDetailView extends StatelessWidget {
     required int count,
     required IconData icon,
     String? subtitle,
+    Widget? sortBar,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -132,7 +198,9 @@ class _SectorDetailView extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: AppTheme.primary),
           const SizedBox(width: 6),
-          Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          Text(title,
+              style:
+                  const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -141,13 +209,19 @@ class _SectorDetailView extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text('$count',
-                style: const TextStyle(fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.w600)),
+                style: const TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.primary,
+                    fontWeight: FontWeight.w600)),
           ),
           if (subtitle != null) ...[
             const SizedBox(width: 6),
             Text(subtitle,
-                style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                style:
+                    const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
           ],
+          const Spacer(),
+          if (sortBar != null) sortBar,
         ],
       ),
     );
@@ -168,7 +242,8 @@ class _SectorDetailView extends StatelessWidget {
           Row(
             children: [
               Text(state.sectorName,
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -177,7 +252,8 @@ class _SectorDetailView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(state.sectorCode,
-                    style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                    style: const TextStyle(
+                        fontSize: 11, color: AppTheme.textMuted)),
               ),
             ],
           ),
@@ -186,8 +262,11 @@ class _SectorDetailView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                state.sectorPrice > 0 ? state.sectorPrice.toStringAsFixed(2) : '--',
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: color),
+                state.sectorPrice > 0
+                    ? state.sectorPrice.toStringAsFixed(2)
+                    : '--',
+                style: TextStyle(
+                    fontSize: 32, fontWeight: FontWeight.bold, color: color),
               ),
               const SizedBox(width: 12),
               Padding(
@@ -197,11 +276,15 @@ class _SectorDetailView extends StatelessWidget {
                   children: [
                     Text(
                       '${state.sectorChangePercent >= 0 ? '+' : ''}${state.sectorChangePercent.toStringAsFixed(2)}%',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: color),
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: color),
                     ),
                     Text(
                       '${state.sectorChange >= 0 ? '+' : ''}${state.sectorChange.toStringAsFixed(2)}',
-                      style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                      style: const TextStyle(
+                          fontSize: 12, color: AppTheme.textSecondary),
                     ),
                   ],
                 ),
@@ -224,10 +307,24 @@ class _SectorDetailView extends StatelessWidget {
       ),
       child: const Row(
         children: [
-          SizedBox(width: 28, child: Text('#', style: TextStyle(fontSize: 11, color: AppTheme.textMuted))),
-          Expanded(flex: 3, child: Text('名称/代码', style: TextStyle(fontSize: 11, color: AppTheme.textMuted))),
-          Expanded(flex: 2, child: Text('现价', style: TextStyle(fontSize: 11, color: AppTheme.textMuted), textAlign: TextAlign.right)),
-          Expanded(flex: 2, child: Text('涨跌幅', style: TextStyle(fontSize: 11, color: AppTheme.textMuted), textAlign: TextAlign.right)),
+          SizedBox(
+              width: 28,
+              child: Text('#',
+                  style: TextStyle(fontSize: 11, color: AppTheme.textMuted))),
+          Expanded(
+              flex: 3,
+              child: Text('名称/代码',
+                  style: TextStyle(fontSize: 11, color: AppTheme.textMuted))),
+          Expanded(
+              flex: 2,
+              child: Text('现价',
+                  style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                  textAlign: TextAlign.right)),
+          Expanded(
+              flex: 2,
+              child: Text('涨跌幅',
+                  style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                  textAlign: TextAlign.right)),
         ],
       ),
     );
@@ -240,7 +337,8 @@ class _SectorDetailView extends StatelessWidget {
         const Padding(
           padding: EdgeInsets.all(40),
           child: Center(
-            child: Text('暂无成分股数据', style: TextStyle(fontSize: 13, color: AppTheme.textMuted)),
+            child: Text('暂无成分股数据',
+                style: TextStyle(fontSize: 13, color: AppTheme.textMuted)),
           ),
         ),
       ];
@@ -280,11 +378,14 @@ class _SectorDetailView extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(stock.name,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w500),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 2),
                   Text(stock.code,
-                      style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                      style: const TextStyle(
+                          fontSize: 11, color: AppTheme.textMuted)),
                 ],
               ),
             ),
@@ -292,7 +393,8 @@ class _SectorDetailView extends StatelessWidget {
               flex: 2,
               child: Text(stock.price.toStringAsFixed(2),
                   textAlign: TextAlign.right,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w500)),
             ),
             Expanded(
               flex: 2,
@@ -305,7 +407,8 @@ class _SectorDetailView extends StatelessWidget {
                 child: Text(
                   '${stock.changePercent >= 0 ? '+' : ''}${stock.changePercent.toStringAsFixed(2)}%',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: sColor),
+                  style: TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w600, color: sColor),
                 ),
               ),
             ),
@@ -313,6 +416,41 @@ class _SectorDetailView extends StatelessWidget {
         ),
       );
     }).toList();
+  }
+
+  // ── 涨跌幅排序切换 ──
+  Widget _buildEstimateSortToggle(
+      BuildContext context, SectorDetailState state) {
+    final bloc = context.read<SectorDetailBloc>();
+    final isActive = state.fundsSortField == SectorFundSortField.estimateChange;
+    return InkWell(
+      onTap: () =>
+          bloc.add(const SectorDetailSortFunds(SectorFundSortField.estimateChange)),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '涨跌幅',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                color: isActive ? AppTheme.primary : AppTheme.textMuted,
+              ),
+            ),
+            Icon(
+              state.fundsSortAscending
+                  ? Icons.arrow_upward
+                  : Icons.arrow_downward,
+              size: 14,
+              color: isActive ? AppTheme.primary : AppTheme.textMuted,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── 基金列表（可点击跳转详情） ──
@@ -358,8 +496,10 @@ class _SectorDetailView extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(fund.name,
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                              maxLines: 1, overflow: TextOverflow.ellipsis),
+                              style: const TextStyle(
+                                  fontSize: 13, fontWeight: FontWeight.w500),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
                         ),
                       ],
                     ),
@@ -367,7 +507,8 @@ class _SectorDetailView extends StatelessWidget {
                     Row(
                       children: [
                         Text(fund.code,
-                            style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                            style: const TextStyle(
+                                fontSize: 11, color: AppTheme.textMuted)),
                         if (fund.type.isNotEmpty) ...[
                           const SizedBox(width: 4),
                           _buildTypeTag(fund.type),
@@ -386,7 +527,9 @@ class _SectorDetailView extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: fund.netValue > 0 ? AppTheme.textPrimary : AppTheme.textMuted,
+                    color: fund.netValue > 0
+                        ? AppTheme.textPrimary
+                        : AppTheme.textMuted,
                   ),
                 ),
               ),
@@ -394,9 +537,11 @@ class _SectorDetailView extends StatelessWidget {
               Expanded(
                 flex: 2,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: fColor.withValues(alpha: fund.hasEstimate ? 0.1 : 0.04),
+                    color:
+                        fColor.withValues(alpha: fund.hasEstimate ? 0.1 : 0.04),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -406,7 +551,8 @@ class _SectorDetailView extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: fund.hasEstimate ? FontWeight.w600 : FontWeight.w400,
+                      fontWeight:
+                          fund.hasEstimate ? FontWeight.w600 : FontWeight.w400,
                       color: fColor,
                     ),
                   ),
@@ -414,7 +560,8 @@ class _SectorDetailView extends StatelessWidget {
               ),
               // 跳转箭头
               const SizedBox(width: 4),
-              const Icon(Icons.chevron_right, size: 16, color: AppTheme.textMuted),
+              const Icon(Icons.chevron_right,
+                  size: 16, color: AppTheme.textMuted),
             ],
           ),
         ),
@@ -464,7 +611,9 @@ class _SectorDetailView extends StatelessWidget {
         color: bgColor,
         borderRadius: BorderRadius.circular(3),
       ),
-      child: Text(label, style: TextStyle(fontSize: 9, color: textColor, fontWeight: FontWeight.w500)),
+      child: Text(label,
+          style: TextStyle(
+              fontSize: 9, color: textColor, fontWeight: FontWeight.w500)),
     );
   }
 }

@@ -15,13 +15,15 @@ class TradeBloc extends Bloc<TradeEvent, TradeState> {
     on<TradeChangeFund>(_onChangeFund);
   }
 
-  Future<void> _onLoadRecords(TradeLoadRecords event, Emitter<TradeState> emit) async {
+  Future<void> _onLoadRecords(
+      TradeLoadRecords event, Emitter<TradeState> emit) async {
     emit(state.copyWith(status: TradeBlocStatus.loading));
     try {
       final records = await _repository.getTradeRecords(code: event.fundCode);
       emit(state.copyWith(status: TradeBlocStatus.loaded, records: records));
     } catch (e) {
-      emit(state.copyWith(status: TradeBlocStatus.error, errorMessage: e.toString()));
+      emit(state.copyWith(
+          status: TradeBlocStatus.error, errorMessage: e.toString()));
     }
   }
 
@@ -38,7 +40,8 @@ class TradeBloc extends Bloc<TradeEvent, TradeState> {
       final records = await _repository.getTradeRecords();
       emit(state.copyWith(status: TradeBlocStatus.saved, records: records));
     } catch (e) {
-      emit(state.copyWith(status: TradeBlocStatus.error, errorMessage: e.toString()));
+      emit(state.copyWith(
+          status: TradeBlocStatus.error, errorMessage: e.toString()));
     }
   }
 
@@ -86,7 +89,9 @@ class TradeBloc extends Bloc<TradeEvent, TradeState> {
             shares: totalShares,
             amount: totalAmount,
             buyNetValue: avgNav,
-            buyDate: record.date.compareTo(existingHolding.buyDate) < 0 ? record.date : existingHolding.buyDate,
+            buyDate: record.date.compareTo(existingHolding.buyDate) < 0
+                ? record.date
+                : existingHolding.buyDate,
           );
           await _repository.addOrUpdateHolding(updated);
         }

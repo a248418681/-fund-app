@@ -15,7 +15,8 @@ class MarketState extends Equatable {
   @override
   List<Object?> get props => [funds, isLoading, error];
 
-  MarketState copyWith({List<FundInfo>? funds, bool? isLoading, String? error}) {
+  MarketState copyWith(
+      {List<FundInfo>? funds, bool? isLoading, String? error}) {
     return MarketState(
       funds: funds ?? this.funds,
       isLoading: isLoading ?? this.isLoading,

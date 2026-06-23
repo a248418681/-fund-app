@@ -33,7 +33,8 @@ class FundRankList extends StatelessWidget {
                   child: Text(
                     '#${idx + 1}',
                     style: TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
                       color: idx < 3 ? AppTheme.primary : AppTheme.textMuted,
                     ),
                   ),
@@ -44,12 +45,14 @@ class FundRankList extends StatelessWidget {
                     children: [
                       Text(
                         item.name,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600),
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
                         '${item.code} · ${item.type}',
-                        style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                        style: const TextStyle(
+                            fontSize: 11, color: AppTheme.textMuted),
                       ),
                     ],
                   ),
@@ -59,12 +62,14 @@ class FundRankList extends StatelessWidget {
                   children: [
                     Text(
                       item.netValue.toStringAsFixed(4),
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                     Text(
                       '${isUp ? '+' : ''}${item.dayChange.toStringAsFixed(2)}%',
                       style: TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                         color: isUp ? AppTheme.upColor : AppTheme.downColor,
                       ),
                     ),

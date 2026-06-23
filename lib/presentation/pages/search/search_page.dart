@@ -68,7 +68,8 @@ class _SearchPageState extends State<SearchPage> {
                 if (state.status == SearchStatus.loading)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 20),
-                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                    child: Center(
+                        child: CircularProgressIndicator(strokeWidth: 2)),
                   ),
                 Expanded(
                   child: state.query.isEmpty
@@ -100,11 +101,15 @@ class _SearchPageState extends State<SearchPage> {
             style: const TextStyle(fontSize: 15, color: AppTheme.textPrimary),
             decoration: InputDecoration(
               hintText: '搜索基金名称或代码',
-              hintStyle: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.5), fontSize: 14),
-              prefixIcon: const Icon(Icons.search, color: AppTheme.textSecondary, size: 20),
+              hintStyle: TextStyle(
+                  color: AppTheme.textSecondary.withValues(alpha: 0.5),
+                  fontSize: 14),
+              prefixIcon: const Icon(Icons.search,
+                  color: AppTheme.textSecondary, size: 20),
               suffixIcon: state.query.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.clear, size: 18, color: AppTheme.textSecondary),
+                      icon: const Icon(Icons.clear,
+                          size: 18, color: AppTheme.textSecondary),
                       onPressed: () {
                         _controller.clear();
                         ctx.read<SearchBloc>().add(const SearchCleared());
@@ -126,16 +131,23 @@ class _SearchPageState extends State<SearchPage> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Text('🔥 热门基金', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+        const Text('🔥 热门基金',
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary)),
         const SizedBox(height: 12),
         if (state.hotFunds.isEmpty)
           const Center(
-            child: Padding(padding: EdgeInsets.all(32),
-              child: Text('正在加载...', style: TextStyle(color: AppTheme.textSecondary)),
+            child: Padding(
+              padding: EdgeInsets.all(32),
+              child: Text('正在加载...',
+                  style: TextStyle(color: AppTheme.textSecondary)),
             ),
           )
         else
-          ...state.hotFunds.map((f) => _FundTile(fund: f, onTap: () => _showFundActions(ctx, f))),
+          ...state.hotFunds.map(
+              (f) => _FundTile(fund: f, onTap: () => _showFundActions(ctx, f))),
         const SizedBox(height: 24),
         _buildTip(),
       ],
@@ -148,11 +160,15 @@ class _SearchPageState extends State<SearchPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 48, color: AppTheme.textSecondary.withValues(alpha: 0.5)),
+            Icon(Icons.error_outline,
+                size: 48, color: AppTheme.textSecondary.withValues(alpha: 0.5)),
             const SizedBox(height: 12),
-            Text('搜索失败', style: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.6))),
+            Text('搜索失败',
+                style: TextStyle(
+                    color: AppTheme.textSecondary.withValues(alpha: 0.6))),
             TextButton(
-              onPressed: () => ctx.read<SearchBloc>().add(SearchQueryChanged(state.query)),
+              onPressed: () =>
+                  ctx.read<SearchBloc>().add(SearchQueryChanged(state.query)),
               child: const Text('重试'),
             ),
           ],
@@ -164,9 +180,12 @@ class _SearchPageState extends State<SearchPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.search_off, size: 48, color: AppTheme.textSecondary.withValues(alpha: 0.5)),
+            Icon(Icons.search_off,
+                size: 48, color: AppTheme.textSecondary.withValues(alpha: 0.5)),
             const SizedBox(height: 12),
-            Text('未找到 "${state.query}"', style: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.6))),
+            Text('未找到 "${state.query}"',
+                style: TextStyle(
+                    color: AppTheme.textSecondary.withValues(alpha: 0.6))),
           ],
         ),
       );
@@ -246,7 +265,9 @@ class _SearchPageState extends State<SearchPage> {
       ),
       builder: (sheet) => Padding(
         padding: EdgeInsets.only(
-          left: 20, right: 20, top: 20,
+          left: 20,
+          right: 20,
+          top: 20,
           bottom: MediaQuery.of(sheet).viewInsets.bottom + 20,
         ),
         child: Column(
@@ -255,39 +276,57 @@ class _SearchPageState extends State<SearchPage> {
           children: [
             Center(
               child: Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(color: AppTheme.textSecondary.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: AppTheme.textSecondary.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2)),
               ),
             ),
             const SizedBox(height: 20),
-            Text('添加 ${fund.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-            Text(fund.code, style: TextStyle(fontSize: 13, color: AppTheme.textSecondary.withValues(alpha: 0.7))),
+            Text('添加 ${fund.name}',
+                style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary)),
+            Text(fund.code,
+                style: TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.textSecondary.withValues(alpha: 0.7))),
             const SizedBox(height: 20),
             TextField(
               controller: amountCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               style: const TextStyle(color: AppTheme.textPrimary),
               decoration: InputDecoration(
                 labelText: '买入金额(元)',
                 hintText: '1000',
-                labelStyle: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.8)),
+                labelStyle: TextStyle(
+                    color: AppTheme.textSecondary.withValues(alpha: 0.8)),
                 filled: true,
                 fillColor: AppTheme.bgCard,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none),
               ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: navCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               style: const TextStyle(color: AppTheme.textPrimary),
               decoration: InputDecoration(
                 labelText: '买入净值',
                 hintText: defaultNav > 1.0 ? '已获取最新净值' : '请输入买入净值',
-                labelStyle: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.8)),
+                labelStyle: TextStyle(
+                    color: AppTheme.textSecondary.withValues(alpha: 0.8)),
                 filled: true,
                 fillColor: AppTheme.bgCard,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none),
               ),
             ),
             const SizedBox(height: 20),
@@ -314,12 +353,14 @@ class _SearchPageState extends State<SearchPage> {
                   );
 
                   _holdingsBloc.add(HoldingsAdd(holding));
-                  Navigator.pop(sheet);  // 关闭 bottom sheet
+                  Navigator.pop(sheet); // 关闭 bottom sheet
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('已添加 "${fund.name}" 到持仓（¥${amount.toStringAsFixed(0)}）'),
+                      content: Text(
+                          '已添加 "${fund.name}" 到持仓（¥${amount.toStringAsFixed(0)}）'),
                       behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
                       duration: const Duration(seconds: 2),
                     ),
                   );
@@ -328,9 +369,12 @@ class _SearchPageState extends State<SearchPage> {
                   backgroundColor: AppTheme.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
-                child: const Text('确认添加', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                child: const Text('确认添加',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
             ),
           ],
@@ -352,7 +396,8 @@ class _SearchPageState extends State<SearchPage> {
           Icon(Icons.lightbulb_outline, size: 16, color: AppTheme.primary),
           SizedBox(width: 8),
           Expanded(
-            child: Text('点击基金可查看详情或添加到持仓', style: TextStyle(fontSize: 12, color: AppTheme.primary)),
+            child: Text('点击基金可查看详情或添加到持仓',
+                style: TextStyle(fontSize: 12, color: AppTheme.primary)),
           ),
         ],
       ),
@@ -380,7 +425,8 @@ class _FundTile extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         onTap: onTap,
         leading: Container(
-          width: 44, height: 44,
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
             color: AppTheme.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(22),
@@ -388,16 +434,25 @@ class _FundTile extends StatelessWidget {
           child: Center(
             child: Text(
               fund.type.isNotEmpty ? fund.type[0] : '?',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primary),
+              style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primary),
             ),
           ),
         ),
         title: Text(fund.name,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textPrimary)),
         subtitle: Text(fund.code,
-          style: TextStyle(fontSize: 12, color: AppTheme.textSecondary.withValues(alpha: 0.7))),
-        trailing: const Icon(Icons.chevron_right, color: AppTheme.textSecondary, size: 22),
+            style: TextStyle(
+                fontSize: 12,
+                color: AppTheme.textSecondary.withValues(alpha: 0.7))),
+        trailing: const Icon(Icons.chevron_right,
+            color: AppTheme.textSecondary, size: 22),
       ),
     );
   }
@@ -434,14 +489,18 @@ class _FundActionsSheet extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    width: 48, height: 48,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
                       color: AppTheme.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(24),
                     ),
                     child: Center(
                       child: Text(fund.name.isNotEmpty ? fund.name[0] : '?',
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primary)),
+                          style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primary)),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -449,13 +508,24 @@ class _FundActionsSheet extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(fund.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-                        Text('${fund.code} · ${fund.type}', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary.withValues(alpha: 0.7))),
+                        Text(fund.name,
+                            style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textPrimary)),
+                        Text('${fund.code} · ${fund.type}',
+                            style: TextStyle(
+                                fontSize: 13,
+                                color: AppTheme.textSecondary
+                                    .withValues(alpha: 0.7))),
                       ],
                     ),
                   ),
                   TextButton(
-                    onPressed: () { Navigator.pop(ctx); ctx.push('/detail/${fund.code}'); },
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      ctx.push('/detail/${fund.code}');
+                    },
                     child: const Text('详情'),
                   ),
                 ],
@@ -520,7 +590,9 @@ class _ActionBtn extends StatelessWidget {
             children: [
               Icon(icon, color: color, size: 20),
               const SizedBox(width: 8),
-              Text(label, style: TextStyle(fontSize: 14, color: color, fontWeight: FontWeight.w600)),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 14, color: color, fontWeight: FontWeight.w600)),
             ],
           ),
         ),

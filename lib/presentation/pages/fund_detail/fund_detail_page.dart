@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/trading_calendar.dart';
 import '../../../domain/entities/fund_entity.dart';
 import '../../bloc/detail/detail_bloc.dart';
 import '../../bloc/detail/detail_event.dart';
@@ -40,8 +41,8 @@ class _FundDetailPageState extends State<FundDetailPage>
   /// 启动自动刷新（仅交易时间，每60秒）
   void _startAutoRefresh() {
     _refreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
-      if (!mounted) return;  // widget 已销毁则跳过
-      if (_isTradingTime()) {
+      if (!mounted) return; // widget 已销毁则跳过
+      if (TradingCalendar.isTradingSession()) {
         context.read<DetailBloc>().add(DetailRefresh(widget.code));
       }
     });
@@ -51,28 +52,6 @@ class _FundDetailPageState extends State<FundDetailPage>
   void _stopAutoRefresh() {
     _refreshTimer?.cancel();
     _refreshTimer = null;
-  }
-
-  /// 判断当前是否为交易时间
-  /// 上午盘：9:30-11:30，下午盘：13:00-15:00
-  bool _isTradingTime() {
-    final now = DateTime.now();
-    final weekday = now.weekday;
-    
-    // 周末休市
-    if (weekday == 6 || weekday == 7) return false;
-    
-    final hour = now.hour;
-    final minute = now.minute;
-    final timeMinutes = hour * 60 + minute;
-    
-    // 上午盘：9:30-11:30 (570-690分钟)
-    if (timeMinutes >= 570 && timeMinutes < 690) return true;
-    
-    // 下午盘：13:00-15:00 (780-900分钟)
-    if (timeMinutes >= 780 && timeMinutes < 900) return true;
-    
-    return false;
   }
 
   @override
@@ -213,7 +192,9 @@ class _FundDetailPageState extends State<FundDetailPage>
         style: TextStyle(
           fontSize: size,
           fontWeight: size >= 22 ? FontWeight.bold : FontWeight.w600,
-          color: flat ? AppTheme.textSecondary : (up ? AppTheme.upColor : AppTheme.downColor),
+          color: flat
+              ? AppTheme.textSecondary
+              : (up ? AppTheme.upColor : AppTheme.downColor),
         ),
       );
     }
@@ -242,7 +223,9 @@ class _FundDetailPageState extends State<FundDetailPage>
                   const SizedBox(width: 4),
                   const Padding(
                     padding: EdgeInsets.only(bottom: 3),
-                    child: Text('今日预估', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                    child: Text('今日预估',
+                        style:
+                            TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                   ),
                 ],
               ),
@@ -250,7 +233,9 @@ class _FundDetailPageState extends State<FundDetailPage>
               // 昨日实际涨跌（小字参考）
               Row(
                 children: [
-                  const Text('昨日 ', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                  const Text('昨日 ',
+                      style:
+                          TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                   chgText(dayChg, dayIsUp, dayIsFlat, size: 12),
                 ],
               ),
@@ -382,8 +367,10 @@ class _FundDetailPageState extends State<FundDetailPage>
                       belowBarData: BarAreaData(
                         show: true,
                         color: (isFlat
-                            ? AppTheme.textSecondary
-                            : (isUp ? AppTheme.upColor : AppTheme.downColor))
+                                ? AppTheme.textSecondary
+                                : (isUp
+                                    ? AppTheme.upColor
+                                    : AppTheme.downColor))
                             .withValues(alpha: 0.1),
                       ),
                     ),
@@ -516,9 +503,21 @@ class _FundDetailPageState extends State<FundDetailPage>
           // 表头
           const Row(
             children: [
-              Expanded(flex: 2, child: Text('股票', style: TextStyle(fontSize: 12, color: AppTheme.textMuted))),
-              Expanded(flex: 1, child: Text('持仓占比', style: TextStyle(fontSize: 12, color: AppTheme.textMuted), textAlign: TextAlign.right)),
-              Expanded(flex: 1, child: Text('涨跌', style: TextStyle(fontSize: 12, color: AppTheme.textMuted), textAlign: TextAlign.right)),
+              Expanded(
+                  flex: 2,
+                  child: Text('股票',
+                      style:
+                          TextStyle(fontSize: 12, color: AppTheme.textMuted))),
+              Expanded(
+                  flex: 1,
+                  child: Text('持仓占比',
+                      style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                      textAlign: TextAlign.right)),
+              Expanded(
+                  flex: 1,
+                  child: Text('涨跌',
+                      style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                      textAlign: TextAlign.right)),
             ],
           ),
           const SizedBox(height: 8),
@@ -538,12 +537,14 @@ class _FundDetailPageState extends State<FundDetailPage>
                       children: [
                         Text(
                           stock.stockName,
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w500),
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           stock.stockCode,
-                          style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                          style: const TextStyle(
+                              fontSize: 11, color: AppTheme.textMuted),
                         ),
                       ],
                     ),
@@ -603,7 +604,8 @@ class _FundDetailPageState extends State<FundDetailPage>
                   children: [
                     const Text(
                       '净值走势',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                     ),
                     const Spacer(),
                     // 期限选择器（横向可滚动）
@@ -617,7 +619,8 @@ class _FundDetailPageState extends State<FundDetailPage>
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Text(
                       _getNavTimeRange(navHistory),
-                      style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                      style: const TextStyle(
+                          fontSize: 11, color: AppTheme.textMuted),
                     ),
                   ),
                 const SizedBox(height: 16),
@@ -692,8 +695,7 @@ class _FundDetailPageState extends State<FundDetailPage>
                         lineBarsData: [
                           LineChartBarData(
                             spots: navHistory.asMap().entries.map((e) {
-                              return FlSpot(
-                                  e.key.toDouble(), e.value.netValue);
+                              return FlSpot(e.key.toDouble(), e.value.netValue);
                             }).toList(),
                             isCurved: true,
                             color: AppTheme.primary,
@@ -708,8 +710,8 @@ class _FundDetailPageState extends State<FundDetailPage>
                       ),
                     ),
                   ),
-            ],
-          ),
+              ],
+            ),
           ),
           const SizedBox(height: 16),
           // 阶段涨幅（来自 periodReturns）
@@ -723,7 +725,7 @@ class _FundDetailPageState extends State<FundDetailPage>
   Widget _buildNavPeriodSelector(DetailState state) {
     final selected = state.selectedNavPeriod;
     const periods = NavPeriod.values;
-    
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -734,7 +736,9 @@ class _FundDetailPageState extends State<FundDetailPage>
             onTap: () {
               final code = state.accurateData?.code ?? '';
               if (code.isNotEmpty) {
-                context.read<DetailBloc>().add(DetailChangeNavPeriod(code, period));
+                context
+                    .read<DetailBloc>()
+                    .add(DetailChangeNavPeriod(code, period));
               }
             },
             child: Container(
@@ -871,7 +875,8 @@ class _FundDetailPageState extends State<FundDetailPage>
           const SizedBox(height: 16),
           const Text(
             '收益数据每日收盘后更新',
-            style: TextStyle(fontSize: 12, color: AppTheme.textMuted, height: 1.6),
+            style:
+                TextStyle(fontSize: 12, color: AppTheme.textMuted, height: 1.6),
           ),
         ],
       ),

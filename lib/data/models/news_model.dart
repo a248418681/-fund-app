@@ -15,9 +15,12 @@ class NewsItem {
   });
 
   factory NewsItem.fromJson(Map<String, dynamic> json) => NewsItem(
-        title: (json['title'] ?? json['TITLE'] ?? json['NOTICETITLE'] ?? '').toString(),
-        date: (json['date'] ?? json['SHOWTIME'] ?? json['NOTICEDATE'] ?? '').toString(),
-        url: (json['url'] ?? json['URL'] ?? json['NOTICECONTENTURL'] ?? '').toString(),
+        title: (json['title'] ?? json['TITLE'] ?? json['NOTICETITLE'] ?? '')
+            .toString(),
+        date: (json['date'] ?? json['SHOWTIME'] ?? json['NOTICEDATE'] ?? '')
+            .toString(),
+        url: (json['url'] ?? json['URL'] ?? json['NOTICECONTENTURL'] ?? '')
+            .toString(),
         source: (json['source'] ?? json['SOURCENAME'] ?? '').toString(),
         type: (json['type'] ?? 'news').toString(),
       );

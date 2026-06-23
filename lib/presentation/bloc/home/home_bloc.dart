@@ -24,7 +24,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       final results = await Future.wait([
         _repository.fetchMarketIndices(),
         _repository.getWatchlist(),
-        _repository.fetchFinanceNews(pageSize: 6).then((v) => v, onError: (_) => <NewsItem>[]),
+        _repository
+            .fetchFinanceNews(pageSize: 6)
+            .then((v) => v, onError: (_) => <NewsItem>[]),
       ]);
       final indices = results[0] as List<MarketIndex>;
       final watchlistInfo = results[1] as List<FundInfo>;
@@ -40,7 +42,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         lastRefreshTime: _formatTime(DateTime.now()),
       ));
     } catch (e) {
-      emit(state.copyWith(status: HomeStatus.error, errorMessage: ErrorUtil.format(e)));
+      emit(state.copyWith(
+          status: HomeStatus.error, errorMessage: ErrorUtil.format(e)));
     }
   }
 
@@ -51,7 +54,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       final results = await Future.wait([
         _repository.fetchMarketIndices(),
         _repository.getWatchlist(),
-        _repository.fetchFinanceNews(pageSize: 6).then((v) => v, onError: (_) => state.news),
+        _repository
+            .fetchFinanceNews(pageSize: 6)
+            .then((v) => v, onError: (_) => state.news),
       ]);
       final indices = results[0] as List<MarketIndex>;
       final watchlistInfo = results[1] as List<FundInfo>;
@@ -68,30 +73,36 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       ));
     } catch (e) {
       debugPrint('[HomeBloc] _onRefresh error: $e');
-      emit(state.copyWith(isRefreshing: false, errorMessage: ErrorUtil.format(e)));
+      emit(state.copyWith(
+          isRefreshing: false, errorMessage: ErrorUtil.format(e)));
     }
   }
 
-  Future<void> _onAddWatchlist(HomeAddWatchlist event, Emitter<HomeState> emit) async {
+  Future<void> _onAddWatchlist(
+      HomeAddWatchlist event, Emitter<HomeState> emit) async {
     await _repository.addToWatchlist(event.code, name: event.name);
     final watchlistInfo = await _repository.getWatchlist();
     final watchlist = await _buildWatchlistItems(watchlistInfo);
     emit(state.copyWith(watchlist: watchlist));
   }
 
-  Future<void> _onRemoveWatchlist(HomeRemoveWatchlist event, Emitter<HomeState> emit) async {
+  Future<void> _onRemoveWatchlist(
+      HomeRemoveWatchlist event, Emitter<HomeState> emit) async {
     await _repository.removeFromWatchlist(event.code);
-    final watchlist = state.watchlist.where((item) => item.code != event.code).toList();
+    final watchlist =
+        state.watchlist.where((item) => item.code != event.code).toList();
     emit(state.copyWith(watchlist: watchlist));
   }
 
-  void _onChangeWatchlistSort(HomeChangeWatchlistSort event, Emitter<HomeState> emit) {
+  void _onChangeWatchlistSort(
+      HomeChangeWatchlistSort event, Emitter<HomeState> emit) {
     final newAsc = event.field == state.sortField ? !state.sortAsc : true;
     emit(state.copyWith(sortField: event.field, sortAsc: newAsc));
   }
 
   /// 用本地名称构建 WatchlistItem（估值数据只取数值，名称不依赖 API 解码）
-  Future<List<WatchlistItem>> _buildWatchlistItems(List<FundInfo> watchlistInfo) async {
+  Future<List<WatchlistItem>> _buildWatchlistItems(
+      List<FundInfo> watchlistInfo) async {
     if (watchlistInfo.isEmpty) return [];
 
     final codes = watchlistInfo.map((f) => f.code).toList();
@@ -107,19 +118,23 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       estimates = await _repository.fetchFundEstimates(codes);
     } catch (e) {
       debugPrint('[HomeBloc] fetchFundEstimates error: $e');
-      return codes.map((code) => WatchlistItem(
-        code: code,
-        name: nameMap[code] ?? code,
-        loading: false,
-        dataSource: 'estimate',
-      )).toList();
+      return codes
+          .map((code) => WatchlistItem(
+                code: code,
+                name: nameMap[code] ?? code,
+                loading: false,
+                dataSource: 'estimate',
+              ))
+          .toList();
     }
 
     return codes.map((code) {
       final est = estimates[code];
       final name = nameMap[code] ?? code;
       if (est != null) {
-        final safeValue = (est.gsz > 0) ? _safeToFixed(est.gsz, 4) : _safeToFixed(est.dwjz, 4);
+        final safeValue = (est.gsz > 0)
+            ? _safeToFixed(est.gsz, 4)
+            : _safeToFixed(est.dwjz, 4);
         final safeLast = (est.dwjz > 0) ? _safeToFixed(est.dwjz, 4) : null;
         return WatchlistItem(
           code: code,

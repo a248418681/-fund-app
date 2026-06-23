@@ -3,6 +3,8 @@ import '../../../domain/entities/fund_entity.dart';
 
 enum SectorDetailStatus { initial, loading, loaded, error }
 
+enum SectorFundSortField { holdingMarketCap, price, estimateChange, name }
+
 class SectorDetailState extends Equatable {
   final SectorDetailStatus status;
   final String sectorCode;
@@ -12,6 +14,8 @@ class SectorDetailState extends Equatable {
   final double sectorChange;
   final List<SectorConstituentItem> stocks;
   final List<SectorFundItem> funds;
+  final SectorFundSortField fundsSortField;
+  final bool fundsSortAscending;
   final String? errorMessage;
 
   const SectorDetailState({
@@ -23,6 +27,8 @@ class SectorDetailState extends Equatable {
     this.sectorChange = 0,
     this.stocks = const [],
     this.funds = const [],
+    this.fundsSortField = SectorFundSortField.estimateChange,
+    this.fundsSortAscending = false,
     this.errorMessage,
   });
 
@@ -35,6 +41,8 @@ class SectorDetailState extends Equatable {
     double? sectorChange,
     List<SectorConstituentItem>? stocks,
     List<SectorFundItem>? funds,
+    SectorFundSortField? fundsSortField,
+    bool? fundsSortAscending,
     String? errorMessage,
   }) {
     return SectorDetailState(
@@ -46,10 +54,24 @@ class SectorDetailState extends Equatable {
       sectorChange: sectorChange ?? this.sectorChange,
       stocks: stocks ?? this.stocks,
       funds: funds ?? this.funds,
+      fundsSortField: fundsSortField ?? this.fundsSortField,
+      fundsSortAscending: fundsSortAscending ?? this.fundsSortAscending,
       errorMessage: errorMessage ?? this.errorMessage,
     );
   }
 
   @override
-  List<Object?> get props => [status, sectorCode, sectorName, sectorPrice, sectorChangePercent, sectorChange, stocks, funds, errorMessage];
+  List<Object?> get props => [
+        status,
+        sectorCode,
+        sectorName,
+        sectorPrice,
+        sectorChangePercent,
+        sectorChange,
+        stocks,
+        funds,
+        fundsSortField,
+        fundsSortAscending,
+        errorMessage
+      ];
 }

@@ -4,12 +4,12 @@ import 'package:equatable/equatable.dart';
 class FundEstimate extends Equatable {
   final String fundCode;
   final String fundName;
-  final double estimateNav;       // 估算净值
-  final double estimateGrowth;    // 估算涨跌幅(%)
-  final String estimateTime;      // 估值时间（原为 double，改为 String 匹配 API）
-  final double yesterdayNav;      // 昨日净值
-  final double maxEstimate;       // 当日最高估值
-  final double minEstimate;       // 当日最低估值
+  final double estimateNav; // 估算净值
+  final double estimateGrowth; // 估算涨跌幅(%)
+  final String estimateTime; // 估值时间（原为 double，改为 String 匹配 API）
+  final double yesterdayNav; // 昨日净值
+  final double maxEstimate; // 当日最高估值
+  final double minEstimate; // 当日最低估值
 
   const FundEstimate({
     required this.fundCode,

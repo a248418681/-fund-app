@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/utils/trading_calendar.dart';
 import '../../../domain/entities/fund_entity.dart';
 import '../../../domain/repositories/fund_repository.dart';
 import 'holdings_event.dart';
@@ -37,14 +38,9 @@ class HoldingsBloc extends Bloc<HoldingsEvent, HoldingsState> {
     _autoRefreshTimer = null;
   }
 
-  /// 当前是否在交易时间
-  static bool isInTradingTime() {
-    final now = DateTime.now();
-    if (!_isTradingDay(now)) return false;
-    final h = now.hour;
-    final m = now.minute;
-    return (h == 9 && m >= 30) || (h > 9 && h < 15);
-  }
+  /// 当前是否在交易时间（9:30-15:00 连续，含午休）
+  /// 午休期间估值仍有参考价值，应触发刷新并显示"当日估算涨跌"
+  static bool isInTradingTime() => TradingCalendar.isMarketOpen();
 
   @override
   Future<void> close() {
@@ -65,11 +61,13 @@ class HoldingsBloc extends Bloc<HoldingsEvent, HoldingsState> {
         lastRefreshTime: DateTime.now(),
       ));
     } catch (e) {
-      emit(state.copyWith(status: HoldingsStatus.error, errorMessage: e.toString()));
+      emit(state.copyWith(
+          status: HoldingsStatus.error, errorMessage: e.toString()));
     }
   }
 
-  Future<void> _onRefresh(HoldingsRefresh event, Emitter<HoldingsState> emit) async {
+  Future<void> _onRefresh(
+      HoldingsRefresh event, Emitter<HoldingsState> emit) async {
     emit(state.copyWith(isRefreshing: true));
     try {
       final records = await _repository.getHoldings();
@@ -89,7 +87,8 @@ class HoldingsBloc extends Bloc<HoldingsEvent, HoldingsState> {
   }
 
   /// 静默刷新：不设 isRefreshing，只有数据真的变了才 emit
-  Future<void> _onSilentRefresh(HoldingsSilentRefresh event, Emitter<HoldingsState> emit) async {
+  Future<void> _onSilentRefresh(
+      HoldingsSilentRefresh event, Emitter<HoldingsState> emit) async {
     try {
       final records = await _repository.getHoldings();
       final enriched = await _enrichAll(records);
@@ -112,7 +111,8 @@ class HoldingsBloc extends Bloc<HoldingsEvent, HoldingsState> {
   }
 
   /// 自动刷新 tick：仅在交易时间触发静默刷新
-  Future<void> _onAutoRefreshTick(HoldingsAutoRefreshTick event, Emitter<HoldingsState> emit) async {
+  Future<void> _onAutoRefreshTick(
+      HoldingsAutoRefreshTick event, Emitter<HoldingsState> emit) async {
     if (!isInTradingTime()) return;
     if (state.status != HoldingsStatus.loaded) return;
     await _onSilentRefresh(HoldingsSilentRefresh(), emit);
@@ -125,7 +125,8 @@ class HoldingsBloc extends Bloc<HoldingsEvent, HoldingsState> {
   }
 
   /// 比较持仓数据是否有实质变化（忽略浮点精度差异）
-  bool _holdingsChanged(List<HoldingWithProfit> old, List<HoldingWithProfit> cur) {
+  bool _holdingsChanged(
+      List<HoldingWithProfit> old, List<HoldingWithProfit> cur) {
     if (old.length != cur.length) return true;
     for (var i = 0; i < old.length; i++) {
       final a = old[i];
@@ -153,14 +154,16 @@ class HoldingsBloc extends Bloc<HoldingsEvent, HoldingsState> {
     emit(state.copyWith(holdings: enriched, summary: _calcSummary(enriched)));
   }
 
-  Future<void> _onUpdate(HoldingsUpdate event, Emitter<HoldingsState> emit) async {
+  Future<void> _onUpdate(
+      HoldingsUpdate event, Emitter<HoldingsState> emit) async {
     await _repository.addOrUpdateHolding(event.holding);
     final records = await _repository.getHoldings();
     final enriched = await _enrichAll(records);
     emit(state.copyWith(holdings: enriched, summary: _calcSummary(enriched)));
   }
 
-  Future<void> _onDelete(HoldingsDelete event, Emitter<HoldingsState> emit) async {
+  Future<void> _onDelete(
+      HoldingsDelete event, Emitter<HoldingsState> emit) async {
     await _repository.removeHolding(event.code);
     final records = await _repository.getHoldings();
     final enriched = await _enrichAll(records);
@@ -168,7 +171,8 @@ class HoldingsBloc extends Bloc<HoldingsEvent, HoldingsState> {
   }
 
   /// 并发丰富所有持仓的实时数据（限制并发数防止触发 API 限流）
-  Future<List<HoldingWithProfit>> _enrichAll(List<HoldingRecord> records) async {
+  Future<List<HoldingWithProfit>> _enrichAll(
+      List<HoldingRecord> records) async {
     if (records.isEmpty) return [];
     final results = <HoldingWithProfit>[];
     // 分批：每批最多 5 个并发
@@ -196,7 +200,9 @@ class HoldingsBloc extends Bloc<HoldingsEvent, HoldingsState> {
       if (data.nav > 0) {
         currentNav = data.nav;
       }
-      effectiveShares = h.shares > 0 ? h.shares : (currentNav > 0 ? h.amount / currentNav : h.amount);
+      effectiveShares = h.shares > 0
+          ? h.shares
+          : (currentNav > 0 ? h.amount / currentNav : h.amount);
       currentValue = effectiveShares * currentNav;
       dayChangePct = data.dayChange;
       estChange = data.estimateChange;
@@ -212,10 +218,10 @@ class HoldingsBloc extends Bloc<HoldingsEvent, HoldingsState> {
 
     final now = DateTime.now();
     final today = _formatDate(now);
-    final isTradingDay = _isTradingDay(now);
+    final isTradingDay = TradingCalendar.isTradingDay(now);
+    final isTradingTime = isTradingDay && TradingCalendar.isMarketOpen(now);
     final hour = now.hour;
     final minute = now.minute;
-    final isTradingTime = isTradingDay && ((hour == 9 && minute >= 30) || (hour > 9 && hour < 15));
     final navUpdated = navDate == today;
 
     // 今日收益
@@ -227,11 +233,11 @@ class HoldingsBloc extends Bloc<HoldingsEvent, HoldingsState> {
 
     final profit = currentValue - h.amount;
     final profitRate = h.amount > 0 ? profit / h.amount : 0.0;
-    
+
     // 根据时间动态生成标签
     String changeLabel;
     String changeUpdateTime;
-    
+
     if (!isTradingDay) {
       // 非交易日：显示"上一交易日涨跌"
       changeLabel = '上一交易日涨跌';
@@ -247,7 +253,8 @@ class HoldingsBloc extends Bloc<HoldingsEvent, HoldingsState> {
     } else if (hour >= 15 && hour < 20 && !navUpdated) {
       // 收盘后到晚上8点，净值未更新：显示"当日估算涨跌（待更新）"
       changeLabel = '当日估算涨跌';
-      changeUpdateTime = estimateTime.isNotEmpty ? '$estimateTime（待净值更新）' : '待净值更新';
+      changeUpdateTime =
+          estimateTime.isNotEmpty ? '$estimateTime（待净值更新）' : '待净值更新';
     } else if (navUpdated) {
       // 净值已更新：显示"当日涨跌"
       changeLabel = '当日涨跌';
@@ -295,34 +302,20 @@ class HoldingsBloc extends Bloc<HoldingsEvent, HoldingsState> {
       hasError: hasError,
     );
   }
-  
+
   /// 格式化日期为 yyyy-MM-dd
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-  }
-  
-  /// 判断是否交易日 — 周一到周五 + 排除中国法定节假日
-  /// 节假日列表需按年更新
-  static bool _isTradingDay(DateTime date) {
-    final weekday = date.weekday;
-    if (weekday == 6 || weekday == 7) return false;
-    final ds = '${date.year}${date.month.toString().padLeft(2,'0')}${date.day.toString().padLeft(2,'0')}';
-    // 2026年上半年法定节假日（不含周末调休）
-    const holidays = {
-      '20260101', '20260102', // 元旦
-      '20260217', '20260218', '20260219', '20260220', '20260221', '20260222', '20260223', // 春节
-      '20260405', '20260406', // 清明
-      '20260501', '20260502', '20260503', // 劳动节
-      '20260531', '20260601', // 端午
-    };
-    return !holidays.contains(ds);
   }
 
   HoldingSummary _calcSummary(List<HoldingWithProfit> holdings) {
     if (holdings.isEmpty) {
       return HoldingSummary(
-        totalValue: 0, totalCost: 0, totalProfit: 0,
-        totalProfitRate: 0, todayProfit: 0,
+        totalValue: 0,
+        totalCost: 0,
+        totalProfit: 0,
+        totalProfitRate: 0,
+        todayProfit: 0,
       );
     }
     double totalCost = 0, totalValue = 0, todayProfit = 0;
@@ -334,8 +327,10 @@ class HoldingsBloc extends Bloc<HoldingsEvent, HoldingsState> {
     final totalProfit = totalValue - totalCost;
     final totalProfitRate = totalCost > 0 ? totalProfit / totalCost : 0.0;
     return HoldingSummary(
-      totalValue: totalValue, totalCost: totalCost,
-      totalProfit: totalProfit, totalProfitRate: totalProfitRate,
+      totalValue: totalValue,
+      totalCost: totalCost,
+      totalProfit: totalProfit,
+      totalProfitRate: totalProfitRate,
       todayProfit: todayProfit,
     );
   }

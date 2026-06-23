@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'sector_detail_state.dart';
 
 abstract class SectorDetailEvent extends Equatable {
   const SectorDetailEvent();
@@ -25,4 +26,17 @@ class SectorDetailLoad extends SectorDetailEvent {
 
   @override
   List<Object?> get props => [code, name, price, changePercent, change];
+}
+
+/// 切换基金排序
+class SectorDetailSortFunds extends SectorDetailEvent {
+  final SectorFundSortField field;
+
+  /// null = toggle current direction, true = ascending, false = descending
+  final bool? ascending;
+
+  const SectorDetailSortFunds(this.field, {this.ascending});
+
+  @override
+  List<Object?> get props => [field, ascending];
 }

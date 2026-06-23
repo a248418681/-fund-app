@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   static const Color primary = Color(0xFF1989fa);
-  static const Color upColor = Color(0xFFe4393c);    // A股红涨
-  static const Color downColor = Color(0xFF18a058);   // A股绿跌
+  static const Color upColor = Color(0xFFe4393c); // A股红涨
+  static const Color downColor = Color(0xFF18a058); // A股绿跌
   static const Color flatColor = Color(0xFF999999);
 
   static const Color bgPrimary = Color(0xFFF2F3F5);
@@ -71,17 +71,24 @@ class AppTheme {
         indicatorColor: primary.withValues(alpha: 0.12),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: primary);
+            return const TextStyle(
+                fontSize: 12, fontWeight: FontWeight.w600, color: primary);
           }
-          return TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: textSec);
+          return TextStyle(
+              fontSize: 12, fontWeight: FontWeight.w400, color: textSec);
         }),
       ),
       textTheme: TextTheme(
-        headlineLarge: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: text),
-        headlineMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: text),
-        titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: text),
-        titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: text),
-        titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: text),
+        headlineLarge:
+            TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: text),
+        headlineMedium:
+            TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: text),
+        titleLarge:
+            TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: text),
+        titleMedium:
+            TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: text),
+        titleSmall:
+            TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: text),
         bodyLarge: TextStyle(fontSize: 16, color: text),
         bodyMedium: TextStyle(fontSize: 14, color: text),
         bodySmall: TextStyle(fontSize: 12, color: textSec),

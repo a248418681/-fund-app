@@ -14,7 +14,8 @@ class TradePage extends StatefulWidget {
   State<TradePage> createState() => _TradePageState();
 }
 
-class _TradePageState extends State<TradePage> with SingleTickerProviderStateMixin {
+class _TradePageState extends State<TradePage>
+    with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
   @override
@@ -115,15 +116,21 @@ class _TradePageState extends State<TradePage> with SingleTickerProviderStateMix
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.cloud_off, size: 64, color: AppTheme.textSecondary.withValues(alpha: 0.3)),
+          Icon(Icons.cloud_off,
+              size: 64, color: AppTheme.textSecondary.withValues(alpha: 0.3)),
           const SizedBox(height: 16),
-          Text('加载失败', style: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.6), fontSize: 16)),
+          Text('加载失败',
+              style: TextStyle(
+                  color: AppTheme.textSecondary.withValues(alpha: 0.6),
+                  fontSize: 16)),
           const SizedBox(height: 4),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
               msg,
-              style: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.4), fontSize: 12),
+              style: TextStyle(
+                  color: AppTheme.textSecondary.withValues(alpha: 0.4),
+                  fontSize: 12),
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -131,7 +138,9 @@ class _TradePageState extends State<TradePage> with SingleTickerProviderStateMix
           ),
           const SizedBox(height: 16),
           ElevatedButton.icon(
-            onPressed: () => context.read<TradeBloc>().add(TradeLoadRecords(fundCode: widget.fundCode)),
+            onPressed: () => context
+                .read<TradeBloc>()
+                .add(TradeLoadRecords(fundCode: widget.fundCode)),
             icon: const Icon(Icons.refresh, size: 18),
             label: const Text('重试'),
           ),
@@ -145,11 +154,18 @@ class _TradePageState extends State<TradePage> with SingleTickerProviderStateMix
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.receipt_long, size: 64, color: AppTheme.textSecondary.withValues(alpha: 0.3)),
+          Icon(Icons.receipt_long,
+              size: 64, color: AppTheme.textSecondary.withValues(alpha: 0.3)),
           const SizedBox(height: 16),
-          Text('暂无交易记录', style: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.6), fontSize: 16)),
+          Text('暂无交易记录',
+              style: TextStyle(
+                  color: AppTheme.textSecondary.withValues(alpha: 0.6),
+                  fontSize: 16)),
           const SizedBox(height: 8),
-          Text('点击右下角添加买入/卖出记录', style: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.4), fontSize: 13)),
+          Text('点击右下角添加买入/卖出记录',
+              style: TextStyle(
+                  color: AppTheme.textSecondary.withValues(alpha: 0.4),
+                  fontSize: 13)),
         ],
       ),
     );
@@ -187,14 +203,23 @@ class _TradePageState extends State<TradePage> with SingleTickerProviderStateMix
                   color: typeColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Text(typeLabel, style: TextStyle(fontSize: 12, color: typeColor, fontWeight: FontWeight.bold)),
+                child: Text(typeLabel,
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: typeColor,
+                        fontWeight: FontWeight.bold)),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(record.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                child: Text(record.name,
+                    style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary)),
               ),
               IconButton(
-                icon: const Icon(Icons.delete_outline, size: 20, color: AppTheme.textSecondary),
+                icon: const Icon(Icons.delete_outline,
+                    size: 20, color: AppTheme.textSecondary),
                 onPressed: () => _confirmDelete(ctx, record),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -214,16 +239,28 @@ class _TradePageState extends State<TradePage> with SingleTickerProviderStateMix
           const SizedBox(height: 6),
           Row(
             children: [
-              _infoChip('净值', record.netValue > 0 ? record.netValue.toStringAsFixed(4) : '-'),
+              _infoChip(
+                  '净值',
+                  record.netValue > 0
+                      ? record.netValue.toStringAsFixed(4)
+                      : '-'),
               const SizedBox(width: 16),
-              _infoChip('份额', record.shares.abs() > 0 ? record.shares.abs().toStringAsFixed(2) : '-'),
+              _infoChip(
+                  '份额',
+                  record.shares.abs() > 0
+                      ? record.shares.abs().toStringAsFixed(2)
+                      : '-'),
               const SizedBox(width: 16),
-              _infoChip('手续费', record.fee > 0 ? '¥${record.fee.toStringAsFixed(2)}' : '-'),
+              _infoChip('手续费',
+                  record.fee > 0 ? '¥${record.fee.toStringAsFixed(2)}' : '-'),
             ],
           ),
           if (record.remark != null && record.remark!.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text(record.remark!, style: TextStyle(fontSize: 12, color: AppTheme.textSecondary.withValues(alpha: 0.7))),
+            Text(record.remark!,
+                style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary.withValues(alpha: 0.7))),
           ],
         ],
       ),
@@ -234,8 +271,15 @@ class _TradePageState extends State<TradePage> with SingleTickerProviderStateMix
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 11, color: AppTheme.textSecondary.withValues(alpha: 0.6))),
-        Text(value, style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary, fontWeight: FontWeight.w500)),
+        Text(label,
+            style: TextStyle(
+                fontSize: 11,
+                color: AppTheme.textSecondary.withValues(alpha: 0.6))),
+        Text(value,
+            style: const TextStyle(
+                fontSize: 13,
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.w500)),
       ],
     );
   }
@@ -245,10 +289,13 @@ class _TradePageState extends State<TradePage> with SingleTickerProviderStateMix
       context: ctx,
       builder: (dlgCtx) => AlertDialog(
         backgroundColor: AppTheme.bgCard,
-        title: const Text('删除确认', style: TextStyle(color: AppTheme.textPrimary)),
-        content: Text('确定删除 "${record.name}" 的交易记录？', style: const TextStyle(color: AppTheme.textSecondary)),
+        title:
+            const Text('删除确认', style: TextStyle(color: AppTheme.textPrimary)),
+        content: Text('确定删除 "${record.name}" 的交易记录？',
+            style: const TextStyle(color: AppTheme.textSecondary)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dlgCtx), child: const Text('取消')),
+          TextButton(
+              onPressed: () => Navigator.pop(dlgCtx), child: const Text('取消')),
           TextButton(
             onPressed: () {
               Navigator.pop(dlgCtx);
@@ -334,12 +381,19 @@ class _AddTradeSheetState extends State<_AddTradeSheet> {
               // 拖动条
               Center(
                 child: Container(
-                  width: 40, height: 4,
-                  decoration: BoxDecoration(color: AppTheme.textSecondary.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                      color: AppTheme.textSecondary.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2)),
                 ),
               ),
               const SizedBox(height: 20),
-              const Text('新增交易', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+              const Text('新增交易',
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary)),
               const SizedBox(height: 20),
 
               // 交易类型
@@ -382,7 +436,8 @@ class _AddTradeSheetState extends State<_AddTradeSheet> {
                       controller: _amountCtrl,
                       style: const TextStyle(color: AppTheme.textPrimary),
                       decoration: _inputDeco('金额(元) *', hint: '1000'),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
                       validator: (v) => v == null || v.isEmpty ? '必填' : null,
                     ),
                   ),
@@ -392,7 +447,8 @@ class _AddTradeSheetState extends State<_AddTradeSheet> {
                       controller: _navCtrl,
                       style: const TextStyle(color: AppTheme.textPrimary),
                       decoration: _inputDeco('净值', hint: '2.1540'),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
                     ),
                   ),
                 ],
@@ -408,7 +464,8 @@ class _AddTradeSheetState extends State<_AddTradeSheet> {
                 controller: _feeCtrl,
                 style: const TextStyle(color: AppTheme.textPrimary),
                 decoration: _inputDeco('手续费(元)', hint: '0'),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
               ),
               const SizedBox(height: 12),
 
@@ -426,12 +483,16 @@ class _AddTradeSheetState extends State<_AddTradeSheet> {
                 child: ElevatedButton(
                   onPressed: _submit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _type == TradeType.sell ? Colors.red : AppTheme.primary,
+                    backgroundColor:
+                        _type == TradeType.sell ? Colors.red : AppTheme.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: const Text('保存', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  child: const Text('保存',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(height: 20),
@@ -452,10 +513,17 @@ class _AddTradeSheetState extends State<_AddTradeSheet> {
           decoration: BoxDecoration(
             color: selected ? color.withValues(alpha: 0.15) : AppTheme.bgCard,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: selected ? color : AppTheme.borderColor, width: selected ? 2 : 1),
+            border: Border.all(
+                color: selected ? color : AppTheme.borderColor,
+                width: selected ? 2 : 1),
           ),
           child: Center(
-            child: Text(label, style: TextStyle(fontSize: 14, color: selected ? color : AppTheme.textSecondary, fontWeight: selected ? FontWeight.bold : FontWeight.normal)),
+            child: Text(label,
+                style: TextStyle(
+                    fontSize: 14,
+                    color: selected ? color : AppTheme.textSecondary,
+                    fontWeight:
+                        selected ? FontWeight.bold : FontWeight.normal)),
           ),
         ),
       ),
@@ -471,7 +539,9 @@ class _AddTradeSheetState extends State<_AddTradeSheet> {
           firstDate: DateTime(2020),
           lastDate: DateTime.now(),
           builder: (_, child) => Theme(
-            data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: AppTheme.primary)),
+            data: Theme.of(context).copyWith(
+                colorScheme:
+                    const ColorScheme.light(primary: AppTheme.primary)),
             child: child!,
           ),
         );
@@ -483,9 +553,12 @@ class _AddTradeSheetState extends State<_AddTradeSheet> {
         decoration: _inputDeco('交易日期'),
         child: Row(
           children: [
-            Text(_date, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15)),
+            Text(_date,
+                style:
+                    const TextStyle(color: AppTheme.textPrimary, fontSize: 15)),
             const Spacer(),
-            const Icon(Icons.calendar_today, size: 18, color: AppTheme.textSecondary),
+            const Icon(Icons.calendar_today,
+                size: 18, color: AppTheme.textSecondary),
           ],
         ),
       ),
@@ -517,7 +590,8 @@ class _AddTradeSheetState extends State<_AddTradeSheet> {
       netValue: netValue,
       shares: shares,
       fee: fee,
-      remark: _remarkCtrl.text.trim().isNotEmpty ? _remarkCtrl.text.trim() : null,
+      remark:
+          _remarkCtrl.text.trim().isNotEmpty ? _remarkCtrl.text.trim() : null,
       createdAt: DateTime.now().millisecondsSinceEpoch,
       status: TradeStatus.completed,
     );
@@ -530,11 +604,14 @@ class _AddTradeSheetState extends State<_AddTradeSheet> {
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      labelStyle: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.8)),
-      hintStyle: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.4)),
+      labelStyle:
+          TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.8)),
+      hintStyle:
+          TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.4)),
       filled: true,
       fillColor: AppTheme.bgCard,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     );
   }

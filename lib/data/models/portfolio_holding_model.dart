@@ -10,9 +10,13 @@ class PortfolioHolding {
     this.ratio = 0.0,
   });
 
-  factory PortfolioHolding.fromJson(Map<String, dynamic> json) => PortfolioHolding(
-        stockCode: (json['stockCode'] ?? json['SENCCODE'] ?? json['SZCODE'] ?? '').toString(),
-        stockName: (json['stockName'] ?? json['SNAME'] ?? json['SZNAME'] ?? '').toString(),
+  factory PortfolioHolding.fromJson(Map<String, dynamic> json) =>
+      PortfolioHolding(
+        stockCode:
+            (json['stockCode'] ?? json['SENCCODE'] ?? json['SZCODE'] ?? '')
+                .toString(),
+        stockName: (json['stockName'] ?? json['SNAME'] ?? json['SZNAME'] ?? '')
+            .toString(),
         ratio: _parseD(json['ratio'] ?? json['JZBL'] ?? json['SZJZBL']),
       );
 

@@ -9,19 +9,27 @@ enum NavPeriod { oneMonth, threeMonth, sixMonth, oneYear }
 extension NavPeriodExt on NavPeriod {
   String get label {
     switch (this) {
-      case NavPeriod.oneMonth: return '近1月';
-      case NavPeriod.threeMonth: return '近3月';
-      case NavPeriod.sixMonth: return '近6月';
-      case NavPeriod.oneYear: return '近1年';
+      case NavPeriod.oneMonth:
+        return '近1月';
+      case NavPeriod.threeMonth:
+        return '近3月';
+      case NavPeriod.sixMonth:
+        return '近6月';
+      case NavPeriod.oneYear:
+        return '近1年';
     }
   }
-  
+
   int get days {
     switch (this) {
-      case NavPeriod.oneMonth: return 30;
-      case NavPeriod.threeMonth: return 90;
-      case NavPeriod.sixMonth: return 180;
-      case NavPeriod.oneYear: return 365;
+      case NavPeriod.oneMonth:
+        return 30;
+      case NavPeriod.threeMonth:
+        return 90;
+      case NavPeriod.sixMonth:
+        return 180;
+      case NavPeriod.oneYear:
+        return 365;
     }
   }
 }
@@ -29,6 +37,7 @@ extension NavPeriodExt on NavPeriod {
 class DetailState extends Equatable {
   final DetailStatus status;
   final FundAccurateData? accurateData;
+
   /// 今日实时估算（来自 fundgz，已内嵌到 accurateData 中）
   /// estimateChange = 估算涨跌幅，estimate = 估算净值，estimateTime = 更新时间
   final List<NetValueRecord> navHistory;
@@ -96,7 +105,8 @@ class DetailState extends Equatable {
       assetAllocation: assetAllocation ?? this.assetAllocation,
       managers: managers ?? this.managers,
       errorMessage: errorMessage ?? this.errorMessage,
-      isRefreshingNavHistory: isRefreshingNavHistory ?? this.isRefreshingNavHistory,
+      isRefreshingNavHistory:
+          isRefreshingNavHistory ?? this.isRefreshingNavHistory,
       isRefreshingPeriod: isRefreshingPeriod ?? this.isRefreshingPeriod,
       selectedNavPeriod: selectedNavPeriod ?? this.selectedNavPeriod,
     );
@@ -104,9 +114,17 @@ class DetailState extends Equatable {
 
   @override
   List<Object?> get props => [
-    status, accurateData, navHistory, periodReturns,
-    stockHoldings, industryAllocation, assetAllocation,
-    managers, errorMessage, isRefreshingNavHistory, isRefreshingPeriod,
-    selectedNavPeriod,
-  ];
+        status,
+        accurateData,
+        navHistory,
+        periodReturns,
+        stockHoldings,
+        industryAllocation,
+        assetAllocation,
+        managers,
+        errorMessage,
+        isRefreshingNavHistory,
+        isRefreshingPeriod,
+        selectedNavPeriod,
+      ];
 }

@@ -14,7 +14,8 @@ class HoldingsPage extends StatefulWidget {
   State<HoldingsPage> createState() => _HoldingsPageState();
 }
 
-class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver {
+class _HoldingsPageState extends State<HoldingsPage>
+    with WidgetsBindingObserver {
   // 主控滚动器（表头）
   final ScrollController _headerScrollCtrl = ScrollController();
   // 数据行的滚动器列表
@@ -115,9 +116,12 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        title: const Text('我的持仓', style: TextStyle(
-          fontSize: 17, fontWeight: FontWeight.w600, color: Color(0xFF1A1A1A),
-        )),
+        title: const Text('我的持仓',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1A1A1A),
+            )),
         actions: [
           IconButton(
             icon: const Icon(Icons.qr_code_scanner, color: AppTheme.primary),
@@ -161,11 +165,12 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
     final s = state.summary;
     final todayUp = s.todayProfit > 0;
     final todayDown = s.todayProfit < 0;
-    
+
     // 从第一个持仓获取更新时间
-    final firstHolding = state.holdings.isNotEmpty ? state.holdings.first : null;
+    final firstHolding =
+        state.holdings.isNotEmpty ? state.holdings.first : null;
     final changeUpdateTime = firstHolding?.changeUpdateTime ?? '';
-    
+
     // 时间感知标签
     final estLabel = _estimateColumnLabel(state);
     final navLabel = _navColumnLabel(state);
@@ -173,11 +178,13 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
 
     // 刷新时间提示
     final refreshHint = _formatRefreshTime(state.lastRefreshTime);
-    
+
     return Container(
       color: Colors.white,
       padding: EdgeInsets.only(
-        left: 20, right: 20, top: 14,
+        left: 20,
+        right: 20,
+        top: 14,
         bottom: 14 + MediaQuery.of(context).padding.bottom * 0.2,
       ),
       child: Column(
@@ -187,14 +194,19 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _sumItem('账户资产', AppTheme.formatMoney(s.totalValue)),
-              Container(width: 1, height: 32,
-                color: const Color(0xFFEEEEEE),
-                margin: const EdgeInsets.symmetric(horizontal: 20)),
+              Container(
+                  width: 1,
+                  height: 32,
+                  color: const Color(0xFFEEEEEE),
+                  margin: const EdgeInsets.symmetric(horizontal: 20)),
               _sumItem(
                 '今日收益',
                 '${s.todayProfit > 0 ? '+' : ''}${s.todayProfit.toStringAsFixed(2)}',
-                color: todayUp ? AppTheme.upColor
-                    : (todayDown ? AppTheme.downColor : const Color(0xFF1A1A1A)),
+                color: todayUp
+                    ? AppTheme.upColor
+                    : (todayDown
+                        ? AppTheme.downColor
+                        : const Color(0xFF1A1A1A)),
               ),
             ],
           ),
@@ -230,12 +242,15 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF999999))),
+        Text(label,
+            style: const TextStyle(fontSize: 11, color: Color(0xFF999999))),
         const SizedBox(height: 4),
-        Text(val, style: TextStyle(
-          fontSize: 17, fontWeight: FontWeight.bold,
-          color: color ?? const Color(0xFF1A1A1A),
-        )),
+        Text(val,
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: color ?? const Color(0xFF1A1A1A),
+            )),
       ],
     );
   }
@@ -256,7 +271,9 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
   /// 时间感知的净值列标签
   String _navColumnLabel(HoldingsState state) {
     // 净值始终显示上一发布日数据，只有 navUpdated=true 时才是今日
-    if (state.holdings.isNotEmpty && state.holdings.first.navUpdated) return '今日净值';
+    if (state.holdings.isNotEmpty && state.holdings.first.navUpdated) {
+      return '今日净值';
+    }
     return '昨日净值';
   }
 
@@ -276,11 +293,16 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
               physics: const ClampingScrollPhysics(),
               child: Row(
                 children: [
-                  _sortHeader('持仓市值', _colW, HoldingsSortField.marketValue, state),
-                  _sortHeader(estLabel, _colW, HoldingsSortField.estimateChange, state),
-                  _sortHeader(navLabel, _colW, HoldingsSortField.netValueChange, state),
-                  _sortHeader('今日收益', _colW, HoldingsSortField.todayProfit, state),
-                  _sortHeader('持有收益', _colW, HoldingsSortField.totalProfit, state),
+                  _sortHeader(
+                      '持仓市值', _colW, HoldingsSortField.marketValue, state),
+                  _sortHeader(
+                      estLabel, _colW, HoldingsSortField.estimateChange, state),
+                  _sortHeader(
+                      navLabel, _colW, HoldingsSortField.netValueChange, state),
+                  _sortHeader(
+                      '今日收益', _colW, HoldingsSortField.todayProfit, state),
+                  _sortHeader(
+                      '持有收益', _colW, HoldingsSortField.totalProfit, state),
                 ],
               ),
             ),
@@ -290,7 +312,8 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
     );
   }
 
-  Widget _sortHeader(String label, double width, HoldingsSortField field, HoldingsState state) {
+  Widget _sortHeader(String label, double width, HoldingsSortField field,
+      HoldingsState state) {
     final isActive = state.sortField == field;
     return GestureDetector(
       onTap: () => _bloc.add(HoldingsChangeSort(field)),
@@ -355,7 +378,8 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
 
     final profitVal = double.tryParse(h.profitRate) ?? 0;
     final estChange = h.estimateChange ?? 0;
-    final hasEst = h.estimateTime?.isNotEmpty == true;
+    final hasEst =
+        h.estimateTime?.isNotEmpty == true || estChange.abs() > 0.001;
     final estUp = estChange > 0;
     final estFlat = estChange.abs() <= 0.001 && hasEst;
     final estCol = estFlat
@@ -385,7 +409,8 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
                   Text(
                     h.name.isEmpty ? h.code : h.name,
                     style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w500,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
                       color: Color(0xFF1A1A1A),
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -396,31 +421,42 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(h.code,
-                        style: const TextStyle(fontSize: 10, color: Color(0xFFBBBBBB))),
+                          style: const TextStyle(
+                              fontSize: 10, color: Color(0xFFBBBBBB))),
                       // API获取失败标记
                       if (h.hasError) ...[
                         const SizedBox(width: 4),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 3, vertical: 1),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFF9800).withValues(alpha: 0.15),
+                            color:
+                                const Color(0xFFFF9800).withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(2),
                           ),
                           child: const Text('获取失败',
-                            style: TextStyle(fontSize: 8, color: Color(0xFFE65100), fontWeight: FontWeight.w500)),
+                              style: TextStyle(
+                                  fontSize: 8,
+                                  color: Color(0xFFE65100),
+                                  fontWeight: FontWeight.w500)),
                         ),
                       ],
                       // 净值已更新标签
                       if (h.navUpdated) ...[
                         const SizedBox(width: 4),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 3, vertical: 1),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
+                            color:
+                                const Color(0xFF4CAF50).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(2),
                           ),
                           child: const Text('已更新',
-                            style: TextStyle(fontSize: 8, color: Color(0xFF4CAF50), fontWeight: FontWeight.w500)),
+                              style: TextStyle(
+                                  fontSize: 8,
+                                  color: Color(0xFF4CAF50),
+                                  fontWeight: FontWeight.w500)),
                         ),
                       ],
                     ],
@@ -440,15 +476,23 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
                         h.marketValue > 0
                             ? h.marketValue.toStringAsFixed(2)
                             : '--',
-                        const Color(0xFF1A1A1A), _colW),
-                    _dCell(hasEst ? '${estUp ? '+' : ''}${estChange.toStringAsFixed(2)}%' : '--', estCol, _colW),
+                        const Color(0xFF1A1A1A),
+                        _colW),
+                    _dCell(
+                        hasEst
+                            ? '${estUp ? '+' : ''}${estChange.toStringAsFixed(2)}%'
+                            : '--',
+                        estCol,
+                        _colW),
                     _dCell(pctStr, pctColor, _colW),
                     _dCell(
                         '${h.todayProfit > 0 && h.todayProfit != 0 ? '+' : ''}${h.todayProfit.toStringAsFixed(2)}',
-                        AppTheme.changeColor(h.todayProfit), _colW),
+                        AppTheme.changeColor(h.todayProfit),
+                        _colW),
                     _dCell(
                         '${profitVal > 0 && profitVal != 0 ? '+' : ''}${h.profit.toStringAsFixed(2)}',
-                        AppTheme.changeColor(profitVal), _colW),
+                        AppTheme.changeColor(profitVal),
+                        _colW),
                   ],
                 ),
               ),
@@ -462,9 +506,10 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
   Widget _dCell(String t, Color c, double w) {
     return SizedBox(
       width: w,
-      child: Text(t, textAlign: TextAlign.right,
-        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: c),
-        overflow: TextOverflow.ellipsis),
+      child: Text(t,
+          textAlign: TextAlign.right,
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: c),
+          overflow: TextOverflow.ellipsis),
     );
   }
 
@@ -499,7 +544,9 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
                 borderRadius: BorderRadius.circular(18),
               ),
               child: const Text('重试',
-                  style: TextStyle(fontSize: 13, color: Colors.white,
+                  style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.white,
                       fontWeight: FontWeight.w500)),
             ),
           ),
@@ -528,7 +575,9 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
                 borderRadius: BorderRadius.circular(18),
               ),
               child: const Text('添加持仓',
-                  style: TextStyle(fontSize: 13, color: Colors.white,
+                  style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.white,
                       fontWeight: FontWeight.w500)),
             ),
           ),
@@ -548,9 +597,11 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _skItem(),
-              Container(width: 1, height: 32,
-                color: const Color(0xFFEEEEEE),
-                margin: const EdgeInsets.symmetric(horizontal: 20)),
+              Container(
+                  width: 1,
+                  height: 32,
+                  color: const Color(0xFFEEEEEE),
+                  margin: const EdgeInsets.symmetric(horizontal: 20)),
               _skItem(),
             ],
           ),
@@ -561,7 +612,8 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
             padding: const EdgeInsets.only(top: 4, bottom: 4),
             itemCount: 4,
             itemBuilder: (_, __) => Container(
-              margin: const EdgeInsets.symmetric(horizontal: _padH, vertical: 3),
+              margin:
+                  const EdgeInsets.symmetric(horizontal: _padH, vertical: 3),
               padding: const EdgeInsets.symmetric(vertical: 10),
               decoration: const BoxDecoration(
                 color: Colors.white,
@@ -607,20 +659,21 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
   }
 
   Widget _skItem() => Column(
-    children: [
-      _skBox(44, 11),
-      const SizedBox(height: 6),
-      _skBox(72, 17),
-    ],
-  );
+        children: [
+          _skBox(44, 11),
+          const SizedBox(height: 6),
+          _skBox(72, 17),
+        ],
+      );
 
   Widget _skBox(double w, double h) => Container(
-    width: w, height: h,
-    decoration: BoxDecoration(
-      color: const Color(0xFFF0F0F0),
-      borderRadius: BorderRadius.circular(3),
-    ),
-  );
+        width: w,
+        height: h,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0F0F0),
+          borderRadius: BorderRadius.circular(3),
+        ),
+      );
 
   // ── 骨架屏占位表头 ─────────────────────────────────────────
   Widget _buildTableHeaderSkeleton() {
@@ -640,11 +693,26 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
               physics: ClampingScrollPhysics(),
               child: Row(
                 children: [
-                  SizedBox(width: _colW, child: Text('持仓市值', style: headerStyle, textAlign: TextAlign.right)),
-                  SizedBox(width: _colW, child: Text('今日估算', style: headerStyle, textAlign: TextAlign.right)),
-                  SizedBox(width: _colW, child: Text('昨日净值', style: headerStyle, textAlign: TextAlign.right)),
-                  SizedBox(width: _colW, child: Text('今日收益', style: headerStyle, textAlign: TextAlign.right)),
-                  SizedBox(width: _colW, child: Text('持有收益', style: headerStyle, textAlign: TextAlign.right)),
+                  SizedBox(
+                      width: _colW,
+                      child: Text('持仓市值',
+                          style: headerStyle, textAlign: TextAlign.right)),
+                  SizedBox(
+                      width: _colW,
+                      child: Text('今日估算',
+                          style: headerStyle, textAlign: TextAlign.right)),
+                  SizedBox(
+                      width: _colW,
+                      child: Text('昨日净值',
+                          style: headerStyle, textAlign: TextAlign.right)),
+                  SizedBox(
+                      width: _colW,
+                      child: Text('今日收益',
+                          style: headerStyle, textAlign: TextAlign.right)),
+                  SizedBox(
+                      width: _colW,
+                      child: Text('持有收益',
+                          style: headerStyle, textAlign: TextAlign.right)),
                 ],
               ),
             ),
@@ -668,9 +736,8 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
         children: [
           // 自动刷新状态指示
           GestureDetector(
-            onTap: state.isRefreshing
-                ? null
-                : () => _bloc.add(HoldingsRefresh()),
+            onTap:
+                state.isRefreshing ? null : () => _bloc.add(HoldingsRefresh()),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
@@ -678,24 +745,30 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
                 children: [
                   if (state.isRefreshing)
                     const SizedBox(
-                      width: 14, height: 14,
+                      width: 14,
+                      height: 14,
                       child: CircularProgressIndicator(
-                        strokeWidth: 1.5, color: Color(0xFF999999)),
+                          strokeWidth: 1.5, color: Color(0xFF999999)),
                     )
                   else if (isInTrading)
                     Container(
-                      width: 8, height: 8,
+                      width: 8,
+                      height: 8,
                       decoration: const BoxDecoration(
                         color: Color(0xFF4CAF50),
                         shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(
-                          color: Color(0xFF4CAF50),
-                          blurRadius: 4, spreadRadius: 1,
-                        )],
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0xFF4CAF50),
+                            blurRadius: 4,
+                            spreadRadius: 1,
+                          )
+                        ],
                       ),
                     )
                   else
-                    const Icon(Icons.access_time, size: 12, color: Color(0xFFBBBBBB)),
+                    const Icon(Icons.access_time,
+                        size: 12, color: Color(0xFFBBBBBB)),
                   const SizedBox(width: 4),
                   Text(
                     state.isRefreshing
@@ -720,9 +793,11 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.qr_code_scanner, size: 14, color: Color(0xFF999999)),
+                  Icon(Icons.qr_code_scanner,
+                      size: 14, color: Color(0xFF999999)),
                   SizedBox(width: 4),
-                  Text('截图导入', style: TextStyle(fontSize: 12, color: Color(0xFF999999))),
+                  Text('截图导入',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF999999))),
                 ],
               ),
             ),
@@ -733,7 +808,7 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
             child: const Padding(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Text('添加持仓',
-                style: TextStyle(fontSize: 12, color: Color(0xFF999999))),
+                  style: TextStyle(fontSize: 12, color: Color(0xFF999999))),
             ),
           ),
         ],
@@ -755,7 +830,8 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
           children: [
             Container(
               margin: const EdgeInsets.only(top: 12),
-              width: 36, height: 4,
+              width: 36,
+              height: 4,
               decoration: BoxDecoration(
                 color: const Color(0xFFEEEEEE),
                 borderRadius: BorderRadius.circular(2),
@@ -763,8 +839,10 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
             ),
             const SizedBox(height: 16),
             Text(h.name.isEmpty ? h.code : h.name,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600,
-                  color: Color(0xFF1A1A1A))),
+                style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1A1A1A))),
             Text(h.code,
                 style: const TextStyle(fontSize: 12, color: Color(0xFF999999))),
             const SizedBox(height: 16),
@@ -779,7 +857,8 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: Color(0xFFEE0A24)),
+              leading:
+                  const Icon(Icons.delete_outline, color: Color(0xFFEE0A24)),
               title: const Text('删除持仓',
                   style: TextStyle(color: Color(0xFFEE0A24))),
               onTap: () {
@@ -802,15 +881,13 @@ class _HoldingsPageState extends State<HoldingsPage> with WidgetsBindingObserver
         content: Text('删除 ${h.name.isEmpty ? h.code : h.name} 的持仓？'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               _bloc.add(HoldingsDelete(h.code));
             },
-            child: const Text('删除',
-                style: TextStyle(color: Color(0xFFEE0A24))),
+            child: const Text('删除', style: TextStyle(color: Color(0xFFEE0A24))),
           ),
         ],
       ),

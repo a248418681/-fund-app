@@ -16,7 +16,8 @@ class FundRepositoryImpl implements FundRepository {
   }
 
   @override
-  Future<Map<String, FundEstimate>> fetchFundEstimates(List<String> codes) async {
+  Future<Map<String, FundEstimate>> fetchFundEstimates(
+      List<String> codes) async {
     return await _remote.fetchFundEstimates(codes);
   }
 
@@ -26,12 +27,15 @@ class FundRepositoryImpl implements FundRepository {
   }
 
   @override
-  Future<List<FundInfo>> searchFund(String keyword, {int limit = 50, CancelToken? cancelToken}) async {
-    return await _remote.searchFund(keyword, limit: limit, cancelToken: cancelToken);
+  Future<List<FundInfo>> searchFund(String keyword,
+      {int limit = 50, CancelToken? cancelToken}) async {
+    return await _remote.searchFund(keyword,
+        limit: limit, cancelToken: cancelToken);
   }
 
   @override
-  Future<List<NetValueRecord>> fetchNetValueHistory(String code, {int days = 30}) async {
+  Future<List<NetValueRecord>> fetchNetValueHistory(String code,
+      {int days = 30}) async {
     return await _remote.fetchNetValueHistory(code, days: days);
   }
 
@@ -96,8 +100,10 @@ class FundRepositoryImpl implements FundRepository {
   }
 
   @override
-  Future<List<NewsItem>> fetchFinanceNews({int pageSize = 10, String category = '102'}) async {
-    return await _remote.fetchFinanceNews(pageSize: pageSize, category: category);
+  Future<List<NewsItem>> fetchFinanceNews(
+      {int pageSize = 10, String category = '102'}) async {
+    return await _remote.fetchFinanceNews(
+        pageSize: pageSize, category: category);
   }
 
   @override
@@ -106,12 +112,15 @@ class FundRepositoryImpl implements FundRepository {
   }
 
   @override
-  Future<List<SectorConstituentItem>> fetchSectorConstituents(String sectorCode, {int pageSize = 50}) async {
-    return await _remote.fetchSectorConstituents(sectorCode, pageSize: pageSize);
+  Future<List<SectorConstituentItem>> fetchSectorConstituents(String sectorCode,
+      {int pageSize = 50}) async {
+    return await _remote.fetchSectorConstituents(sectorCode,
+        pageSize: pageSize);
   }
 
   @override
-  Future<SectorInfo?> fetchSectorInfo(String fundName, String fundType, String fundCode) async {
+  Future<SectorInfo?> fetchSectorInfo(
+      String fundName, String fundType, String fundCode) async {
     return await _remote.fetchSectorInfo(fundName, fundType, fundCode);
   }
 
@@ -120,8 +129,17 @@ class FundRepositoryImpl implements FundRepository {
   // ══════════════════════════════════════════════════════════════════════
 
   @override
-  Future<List<SectorFundItem>> fetchSectorFunds(String sectorName, {int pageSize = 20}) async {
+  Future<List<SectorFundItem>> fetchSectorFunds(String sectorName,
+      {int pageSize = 20}) async {
     return await _remote.fetchSectorFunds(sectorName, pageSize: pageSize);
+  }
+
+  @override
+  Future<List<SectorFundItem>> fetchSectorFundsByHoldings(
+      String sectorCode, String sectorName,
+      {int pageSize = 30}) async {
+    return await _remote.fetchSectorFundsByHoldings(sectorCode, sectorName,
+        pageSize: pageSize);
   }
 
   @override
@@ -146,14 +164,16 @@ class FundRepositoryImpl implements FundRepository {
       _local.addToWatchlist(code, name: name);
 
   @override
-  Future<void> removeFromWatchlist(String code) => _local.removeFromWatchlist(code);
+  Future<void> removeFromWatchlist(String code) =>
+      _local.removeFromWatchlist(code);
 
   @override
   Future<List<TradeRecord>> getTradeRecords({String? code}) =>
       _local.getTradeRecords(code: code);
 
   @override
-  Future<void> addTradeRecord(TradeRecord record) => _local.addTradeRecord(record);
+  Future<void> addTradeRecord(TradeRecord record) =>
+      _local.addTradeRecord(record);
 
   @override
   Future<void> removeTradeRecord(String id) => _local.removeTradeRecord(id);

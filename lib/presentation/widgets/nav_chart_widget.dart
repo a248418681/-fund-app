@@ -17,15 +17,19 @@ class NavChartWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (history.isEmpty) {
-      return const Center(child: Text('暂无数据', style: TextStyle(color: AppTheme.textMuted)));
+      return const Center(
+          child: Text('暂无数据', style: TextStyle(color: AppTheme.textMuted)));
     }
 
-    final spots = history.asMap().entries.map((e) =>
-      FlSpot(e.key.toDouble(), e.value.netValue)
-    ).toList();
+    final spots = history
+        .asMap()
+        .entries
+        .map((e) => FlSpot(e.key.toDouble(), e.value.netValue))
+        .toList();
 
     if (spots.length < 2) {
-      return const Center(child: Text('数据不足', style: TextStyle(color: AppTheme.textMuted)));
+      return const Center(
+          child: Text('数据不足', style: TextStyle(color: AppTheme.textMuted)));
     }
 
     final minY = spots.map((s) => s.y).reduce((a, b) => a < b ? a : b);
@@ -55,14 +59,18 @@ class NavChartWidget extends StatelessWidget {
               getTitlesWidget: (value, meta) {
                 return Text(
                   value.toStringAsFixed(2),
-                  style: const TextStyle(fontSize: 9, color: AppTheme.textMuted),
+                  style:
+                      const TextStyle(fontSize: 9, color: AppTheme.textMuted),
                 );
               },
             ),
           ),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          bottomTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         borderData: FlBorderData(show: false),
         minY: minY - range * 0.08,

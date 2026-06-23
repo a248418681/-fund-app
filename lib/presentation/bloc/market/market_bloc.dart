@@ -19,27 +19,29 @@ class MarketBloc extends Bloc<MarketEvent, MarketState> {
     on<MarketLoadSectors>(_onLoadSectors);
   }
 
-  /// 一次性获取涨幅+跌幅 TopN（复用同一份全量数据，避免请求两次 2.9MB）
-  Future<({List<FundRankItem> gainers, List<FundRankItem> losers})> _fetchGainersAndLosers(
+  /// 分两次请求涨幅/跌幅 TopN（避免拉取 20000 条全量数据）
+  Future<({List<FundRankItem> gainers, List<FundRankItem> losers})>
+      _fetchGainersAndLosers(
     String sortType, {
     bool forceRefresh = false,
   }) async {
-    final allSortedDesc = await _repository.fetchFundRanking(
+    // 涨幅榜：按日涨幅降序取前 TopN
+    final gainers = await _repository.fetchFundRanking(
       sortType: sortType,
       order: 'desc',
-      pageSize: 20000,
+      pageSize: _topN,
       fundType: 'all',
     );
 
-    // 涨幅榜 = 前 TopN
-    final gainers = allSortedDesc.take(_topN).toList();
-
-    // 跌幅榜 = 取 dayChange < 0 的末尾 20 只，升序排列：亏最多的在前
-    final losers = allSortedDesc.reversed
-        .where((item) => item.dayChange < 0)
-        .take(_topN)
-        .toList()
-      ..sort((a, b) => a.dayChange.compareTo(b.dayChange));
+    // 跌幅榜：按日涨幅升序取前 TopN
+    final losersRaw = await _repository.fetchFundRanking(
+      sortType: sortType,
+      order: 'asc',
+      pageSize: _topN,
+      fundType: 'all',
+    );
+    // 过滤掉 dayChange >= 0 的（升序可能混入 0 或正值）
+    final losers = losersRaw.where((item) => item.dayChange < 0).toList();
 
     return (gainers: gainers, losers: losers);
   }
@@ -59,17 +61,20 @@ class MarketBloc extends Bloc<MarketEvent, MarketState> {
       ));
 
       // Phase 2: 排行榜后到（全量缓存未命中时 ~2-3s），增量更新
-      final rankResult = await _fetchGainersAndLosers(state.sortType, forceRefresh: true);
+      final rankResult =
+          await _fetchGainersAndLosers(state.sortType, forceRefresh: true);
       emit(state.copyWith(
         gainers: rankResult.gainers,
         losers: rankResult.losers,
       ));
     } catch (e) {
-      emit(state.copyWith(status: MarketStatus.error, errorMessage: e.toString()));
+      emit(state.copyWith(
+          status: MarketStatus.error, errorMessage: e.toString()));
     }
   }
 
-  Future<void> _onRefresh(MarketRefresh event, Emitter<MarketState> emit) async {
+  Future<void> _onRefresh(
+      MarketRefresh event, Emitter<MarketState> emit) async {
     final token = ++_fetchToken;
     emit(state.copyWith(isRefreshing: true));
     try {
@@ -78,7 +83,10 @@ class MarketBloc extends Bloc<MarketEvent, MarketState> {
         _fetchGainersAndLosers(state.sortType, forceRefresh: true),
       ]);
       if (token != _fetchToken) return;
-      final rankResult = results[1] as ({List<FundRankItem> gainers, List<FundRankItem> losers});
+      final rankResult = results[1] as ({
+        List<FundRankItem> gainers,
+        List<FundRankItem> losers
+      });
       emit(state.copyWith(
         indices: results[0] as List<MarketIndex>,
         gainers: rankResult.gainers,
@@ -96,7 +104,8 @@ class MarketBloc extends Bloc<MarketEvent, MarketState> {
     emit(state.copyWith(tabIndex: event.tabIndex));
   }
 
-  Future<void> _onChangeSort(MarketChangeSort event, Emitter<MarketState> emit) async {
+  Future<void> _onChangeSort(
+      MarketChangeSort event, Emitter<MarketState> emit) async {
     final token = ++_fetchToken;
     emit(state.copyWith(sortType: event.sortType, isRefreshing: true));
     try {
@@ -114,7 +123,8 @@ class MarketBloc extends Bloc<MarketEvent, MarketState> {
     }
   }
 
-  Future<void> _onLoadSectors(MarketLoadSectors event, Emitter<MarketState> emit) async {
+  Future<void> _onLoadSectors(
+      MarketLoadSectors event, Emitter<MarketState> emit) async {
     try {
       final sectors = await _repository.fetchSectorRanking(pageSize: 10);
       emit(state.copyWith(sectors: sectors));

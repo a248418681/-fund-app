@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as path_pkg;
@@ -54,9 +55,11 @@ class FundLocalDataSource {
         return _getDemoHoldings();
       }
       final list = jsonDecode(raw) as List;
-      return list.map((item) => HoldingRecord.fromJson(item as Map<String, dynamic>)).toList();
+      return list
+          .map((item) => HoldingRecord.fromJson(item as Map<String, dynamic>))
+          .toList();
     } catch (e) {
-      print('[LocalDS] getHoldings error: $e');
+      debugPrint('[LocalDS] getHoldings error: $e');
       return _getDemoHoldings();
     }
   }
@@ -70,9 +73,13 @@ class FundLocalDataSource {
         amount: 5000,
         shares: 5000 / 0.5432,
         buyNetValue: 0.5432,
-        buyDate: now.subtract(const Duration(days: 30)).toIso8601String().split('T')[0],
+        buyDate: now
+            .subtract(const Duration(days: 30))
+            .toIso8601String()
+            .split('T')[0],
         shareClass: 'C',
-        createdAt: now.subtract(const Duration(days: 30)).millisecondsSinceEpoch,
+        createdAt:
+            now.subtract(const Duration(days: 30)).millisecondsSinceEpoch,
         holdingDays: 30,
       ),
       HoldingRecord(
@@ -81,9 +88,13 @@ class FundLocalDataSource {
         amount: 10000,
         shares: 10000 / 2.1540,
         buyNetValue: 2.1540,
-        buyDate: now.subtract(const Duration(days: 100)).toIso8601String().split('T')[0],
+        buyDate: now
+            .subtract(const Duration(days: 100))
+            .toIso8601String()
+            .split('T')[0],
         shareClass: 'A',
-        createdAt: now.subtract(const Duration(days: 100)).millisecondsSinceEpoch,
+        createdAt:
+            now.subtract(const Duration(days: 100)).millisecondsSinceEpoch,
         holdingDays: 100,
       ),
     ];
@@ -92,9 +103,10 @@ class FundLocalDataSource {
   Future<void> saveHoldings(List<HoldingRecord> holdings) async {
     try {
       final p = await prefs;
-      await p.setString(_holdingsKey, jsonEncode(holdings.map((h) => h.toJson()).toList()));
+      await p.setString(
+          _holdingsKey, jsonEncode(holdings.map((h) => h.toJson()).toList()));
     } catch (e) {
-      print('[LocalDS] saveHoldings error: $e');
+      debugPrint('[LocalDS] saveHoldings error: $e');
     }
   }
 
@@ -145,22 +157,27 @@ class FundLocalDataSource {
     final raw = p.getString(_watchlistKey);
     final codeList = <String>[];
     if (raw == null || raw.isEmpty) {
-      codeList.addAll(['005827', '110022', '012348', '001548', '320007', '016874']);
+      codeList
+          .addAll(['005827', '110022', '012348', '001548', '320007', '016874']);
     } else {
       try {
         codeList.addAll(List<String>.from(jsonDecode(raw)));
       } catch (_) {
-        codeList.addAll(['005827', '110022', '012348', '001548', '320007', '016874']);
+        codeList.addAll(
+            ['005827', '110022', '012348', '001548', '320007', '016874']);
       }
     }
     // 名称优先级：持久化名 > demo 名 > code
-    final p2 = await prefs;
-    return codeList.map((code) => FundInfo(
-      code: code,
-      name: p2.getString('fund_name_$code') ?? _demoFundNames[code] ?? code,
-      type: '',
-      pinyin: '',
-    )).toList();
+    return codeList
+        .map((code) => FundInfo(
+              code: code,
+              name: p.getString('fund_name_$code') ??
+                  _demoFundNames[code] ??
+                  code,
+              type: '',
+              pinyin: '',
+            ))
+        .toList();
   }
 
   Future<void> addToWatchlist(String code, {String name = ''}) async {
@@ -168,7 +185,9 @@ class FundLocalDataSource {
     final raw = p.getString(_watchlistKey);
     List<String> list = [];
     if (raw != null && raw.isNotEmpty) {
-      try { list.addAll(List<String>.from(jsonDecode(raw))); } catch (_) {}
+      try {
+        list.addAll(List<String>.from(jsonDecode(raw)));
+      } catch (_) {}
     }
     if (!list.contains(code)) {
       list.add(code);
@@ -176,8 +195,7 @@ class FundLocalDataSource {
     }
     // 同时存名称
     if (name.isNotEmpty) {
-      final p2 = await prefs;
-      await p2.setString('fund_name_$code', name);
+      await p.setString('fund_name_$code', name);
     }
   }
 
@@ -186,7 +204,9 @@ class FundLocalDataSource {
     final raw = p.getString(_watchlistKey);
     List<String> list = [];
     if (raw != null && raw.isNotEmpty) {
-      try { list.addAll(List<String>.from(jsonDecode(raw))); } catch (_) {}
+      try {
+        list.addAll(List<String>.from(jsonDecode(raw)));
+      } catch (_) {}
     }
     list.remove(code);
     await p.setString(_watchlistKey, jsonEncode(list));
@@ -204,25 +224,29 @@ class FundLocalDataSource {
     if (raw == null) return [];
     try {
       final list = jsonDecode(raw) as List;
-      final records = list.map((item) => TradeRecord(
-        id: item['id'] ?? '',
-        code: item['code'] ?? '',
-        name: item['name'] ?? '',
-        type: TradeType.values.firstWhere(
-          (t) => t.name == item['type'],
-          orElse: () => TradeType.buy,
-        ),
-        date: item['date'] ?? '',
-        amount: (item['amount'] ?? 0).toDouble(),
-        netValue: (item['netValue'] ?? 0).toDouble(),
-        shares: (item['shares'] ?? 0).toDouble(),
-        fee: (item['fee'] ?? 0).toDouble(),
-        remark: item['remark'],
-        createdAt: item['createdAt'] ?? 0,
-        status: item['status'] != null
-            ? TradeStatus.values.firstWhere((s) => s.name == item['status'], orElse: () => TradeStatus.completed)
-            : null,
-      )).toList();
+      final records = list
+          .map((item) => TradeRecord(
+                id: item['id'] ?? '',
+                code: item['code'] ?? '',
+                name: item['name'] ?? '',
+                type: TradeType.values.firstWhere(
+                  (t) => t.name == item['type'],
+                  orElse: () => TradeType.buy,
+                ),
+                date: item['date'] ?? '',
+                amount: (item['amount'] ?? 0).toDouble(),
+                netValue: (item['netValue'] ?? 0).toDouble(),
+                shares: (item['shares'] ?? 0).toDouble(),
+                fee: (item['fee'] ?? 0).toDouble(),
+                remark: item['remark'],
+                createdAt: item['createdAt'] ?? 0,
+                status: item['status'] != null
+                    ? TradeStatus.values.firstWhere(
+                        (s) => s.name == item['status'],
+                        orElse: () => TradeStatus.completed)
+                    : null,
+              ))
+          .toList();
       if (code != null) {
         return records.where((r) => r.code == code).toList();
       }
@@ -253,13 +277,15 @@ class FundLocalDataSource {
     final records = await getTradeRecords();
     records.add(record);
     final p = await prefs;
-    await p.setString(_tradeRecordsKey, jsonEncode(records.map(_tradeRecordToMap).toList()));
+    await p.setString(
+        _tradeRecordsKey, jsonEncode(records.map(_tradeRecordToMap).toList()));
   }
 
   Future<void> removeTradeRecord(String id) async {
     final records = await getTradeRecords();
     records.removeWhere((r) => r.id == id);
     final p = await prefs;
-    await p.setString(_tradeRecordsKey, jsonEncode(records.map(_tradeRecordToMap).toList()));
+    await p.setString(
+        _tradeRecordsKey, jsonEncode(records.map(_tradeRecordToMap).toList()));
   }
 }

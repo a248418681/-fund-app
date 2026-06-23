@@ -12,7 +12,8 @@ class NewsPage extends StatefulWidget {
   State<NewsPage> createState() => _NewsPageState();
 }
 
-class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin {
+class _NewsPageState extends State<NewsPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final Map<String, List<NewsItem>> _cachedNews = {};
   final Map<String, String?> _cachedErrors = {};
@@ -55,7 +56,8 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
     }
     try {
       final repo = getIt<FundRepository>();
-      final news = await repo.fetchFinanceNews(pageSize: 30, category: category);
+      final news =
+          await repo.fetchFinanceNews(pageSize: 30, category: category);
       setState(() {
         _cachedNews[category] = news;
         _cachedErrors.remove(category);
@@ -73,14 +75,17 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
   Future<void> _onRefresh(String category) async {
     try {
       final repo = getIt<FundRepository>();
-      final news = await repo.fetchFinanceNews(pageSize: 30, category: category);
+      final news =
+          await repo.fetchFinanceNews(pageSize: 30, category: category);
       setState(() {
         _cachedNews[category] = news;
         _cachedErrors.remove(category);
       });
     } catch (e) {
       debugPrint('[NewsPage] refresh error: $e');
-      setState(() { _cachedErrors[category] = e.toString(); });
+      setState(() {
+        _cachedErrors[category] = e.toString();
+      });
     }
   }
 
@@ -105,7 +110,8 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
           labelColor: AppTheme.primary,
           unselectedLabelColor: AppTheme.textMuted,
           indicatorColor: AppTheme.primary,
-          labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          labelStyle:
+              const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           unselectedLabelStyle: const TextStyle(fontSize: 14),
           tabs: _categories.map((c) => Tab(text: c.$2)).toList(),
         ),
@@ -134,7 +140,8 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.article_outlined, size: 48, color: AppTheme.textMuted.withValues(alpha: 0.5)),
+            Icon(Icons.article_outlined,
+                size: 48, color: AppTheme.textMuted.withValues(alpha: 0.5)),
             const SizedBox(height: 12),
             const Text('暂无资讯', style: TextStyle(color: AppTheme.textMuted)),
           ],
@@ -152,7 +159,9 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
           final item = news[idx];
           final isUp = item.title.contains('涨') || item.title.contains('升');
           final isDown = item.title.contains('跌') || item.title.contains('降');
-          final tagColor = isUp ? AppTheme.upColor : (isDown ? AppTheme.downColor : AppTheme.textMuted);
+          final tagColor = isUp
+              ? AppTheme.upColor
+              : (isDown ? AppTheme.downColor : AppTheme.textMuted);
 
           return InkWell(
             onTap: () => _openUrl(item.url),
@@ -185,15 +194,22 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
                           children: [
                             Text(
                               item.title,
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, height: 1.4),
+                              style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.4),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            if (item.digest != null && item.digest!.isNotEmpty) ...[
+                            if (item.digest != null &&
+                                item.digest!.isNotEmpty) ...[
                               const SizedBox(height: 6),
                               Text(
                                 item.digest!,
-                                style: TextStyle(fontSize: 12, color: AppTheme.textSecondary.withValues(alpha: 0.8)),
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppTheme.textSecondary
+                                        .withValues(alpha: 0.8)),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -207,17 +223,24 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: AppTheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text(item.source, style: const TextStyle(fontSize: 10, color: AppTheme.primary)),
+                        child: Text(item.source,
+                            style: const TextStyle(
+                                fontSize: 10, color: AppTheme.primary)),
                       ),
                       const SizedBox(width: 8),
-                      Text(item.time, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                      Text(item.time,
+                          style: const TextStyle(
+                              fontSize: 11, color: AppTheme.textMuted)),
                       const Spacer(),
-                      Icon(Icons.open_in_new, size: 14, color: AppTheme.textMuted.withValues(alpha: 0.5)),
+                      Icon(Icons.open_in_new,
+                          size: 14,
+                          color: AppTheme.textMuted.withValues(alpha: 0.5)),
                     ],
                   ),
                 ],
@@ -234,15 +257,19 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.cloud_off, size: 48, color: AppTheme.textMuted.withValues(alpha: 0.5)),
+          Icon(Icons.cloud_off,
+              size: 48, color: AppTheme.textMuted.withValues(alpha: 0.5)),
           const SizedBox(height: 12),
-          const Text('加载失败', style: TextStyle(color: AppTheme.textMuted, fontSize: 14)),
+          const Text('加载失败',
+              style: TextStyle(color: AppTheme.textMuted, fontSize: 14)),
           const SizedBox(height: 4),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
               msg,
-              style: TextStyle(color: AppTheme.textMuted.withValues(alpha: 0.6), fontSize: 11),
+              style: TextStyle(
+                  color: AppTheme.textMuted.withValues(alpha: 0.6),
+                  fontSize: 11),
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,

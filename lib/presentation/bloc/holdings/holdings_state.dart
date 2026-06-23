@@ -3,7 +3,14 @@ import '../../../domain/entities/fund_entity.dart';
 
 enum HoldingsStatus { initial, loading, loaded, error }
 
-enum HoldingsSortField { name, marketValue, estimateChange, netValueChange, todayProfit, totalProfit }
+enum HoldingsSortField {
+  name,
+  marketValue,
+  estimateChange,
+  netValueChange,
+  todayProfit,
+  totalProfit
+}
 
 class HoldingsState extends Equatable {
   final HoldingsStatus status;
@@ -24,13 +31,14 @@ class HoldingsState extends Equatable {
     this.lastRefreshTime,
     this.sortField = HoldingsSortField.name,
     this.sortAsc = true,
-  }) : summary = summary ?? HoldingSummary(
-    totalValue: 0,
-    totalCost: 0,
-    totalProfit: 0,
-    totalProfitRate: 0,
-    todayProfit: 0,
-  );
+  }) : summary = summary ??
+            HoldingSummary(
+              totalValue: 0,
+              totalCost: 0,
+              totalProfit: 0,
+              totalProfitRate: 0,
+              todayProfit: 0,
+            );
 
   HoldingsState copyWith({
     HoldingsStatus? status,
@@ -81,5 +89,14 @@ class HoldingsState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [status, holdings, summary, isRefreshing, errorMessage, lastRefreshTime, sortField, sortAsc];
+  List<Object?> get props => [
+        status,
+        holdings,
+        summary,
+        isRefreshing,
+        errorMessage,
+        lastRefreshTime,
+        sortField,
+        sortAsc
+      ];
 }

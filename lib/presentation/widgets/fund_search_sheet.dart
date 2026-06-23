@@ -22,7 +22,8 @@ class _FundSearchSheetState extends State<FundSearchSheet> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _focusNode.requestFocus());
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _focusNode.requestFocus());
   }
 
   @override
@@ -70,7 +71,9 @@ class _FundSearchSheetState extends State<FundSearchSheet> {
                             icon: const Icon(Icons.clear),
                             onPressed: () {
                               _controller.clear();
-                              context.read<SearchBloc>().add(const SearchCleared());
+                              context
+                                  .read<SearchBloc>()
+                                  .add(const SearchCleared());
                               setState(() {});
                             },
                           )
@@ -112,23 +115,29 @@ class _FundSearchSheetState extends State<FundSearchSheet> {
                         return ListTile(
                           leading: CircleAvatar(
                             radius: 16,
-                            backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
+                            backgroundColor:
+                                AppTheme.primary.withValues(alpha: 0.1),
                             child: Text(
                               fund.code.substring(0, 1),
-                              style: const TextStyle(fontSize: 12, color: AppTheme.primary),
+                              style: const TextStyle(
+                                  fontSize: 12, color: AppTheme.primary),
                             ),
                           ),
                           title: Text(
                             fund.name,
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                            style: const TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w600),
                           ),
                           subtitle: Text(
                             '${fund.code} · ${fund.type}',
                             style: const TextStyle(fontSize: 12),
                           ),
-                          trailing: const Icon(Icons.add_circle_outline, color: AppTheme.primary),
+                          trailing: const Icon(Icons.add_circle_outline,
+                              color: AppTheme.primary),
                           onTap: () {
-                            context.read<HomeBloc>().add(HomeAddWatchlist(fund.code, fund.name));
+                            context
+                                .read<HomeBloc>()
+                                .add(HomeAddWatchlist(fund.code, fund.name));
                             Navigator.pop(context);
                           },
                         );

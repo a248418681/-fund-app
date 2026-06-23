@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'core/di/injection.dart';
@@ -16,21 +17,39 @@ void main() async {
   // 后台加载公司名列表（不阻塞启动）
   OcrService.initCompanyNames();
   Bloc.observer = AppBlocObserver();
-  runApp(const FundApp());
+  // 恢复主题设置
+  final prefs = await SharedPreferences.getInstance();
+  final savedThemeIndex = prefs.getInt('theme_mode') ?? 0;
+  runApp(FundApp(initialThemeMode: ThemeMode.values[savedThemeIndex]));
 }
 
 class FundApp extends StatefulWidget {
-  const FundApp({super.key});
+  final ThemeMode initialThemeMode;
+
+  const FundApp({super.key, required this.initialThemeMode});
 
   @override
   State<FundApp> createState() => _FundAppState();
 }
 
 class _FundAppState extends State<FundApp> {
-  final _themeMode = ValueNotifier(ThemeMode.system);
+  late final ValueNotifier<ThemeMode> _themeMode;
+
+  @override
+  void initState() {
+    super.initState();
+    _themeMode = ValueNotifier(widget.initialThemeMode);
+    _themeMode.addListener(_saveThemeMode);
+  }
+
+  Future<void> _saveThemeMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('theme_mode', _themeMode.value.index);
+  }
 
   @override
   void dispose() {
+    _themeMode.removeListener(_saveThemeMode);
     _themeMode.dispose();
     super.dispose();
   }

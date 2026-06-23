@@ -45,7 +45,8 @@ class _MainPageState extends State<MainPage> {
   int _currentIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
     // 精确匹配 /（否则 /market 会错误匹配到自选首页）
-    final idx = _routes.indexWhere((r) => r == '/' ? location == '/' : location.startsWith(r));
+    final idx = _routes
+        .indexWhere((r) => r == '/' ? location == '/' : location.startsWith(r));
     return idx < 0 ? 1 : idx; // 默认选中"自选"（index=1）
   }
 
@@ -104,4 +105,3 @@ class _MainPageState extends State<MainPage> {
     );
   }
 }
-

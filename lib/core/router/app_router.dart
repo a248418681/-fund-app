@@ -22,8 +22,10 @@ import '../../presentation/pages/sector_detail/sector_detail_page.dart';
 import '../../presentation/bloc/detail/detail_bloc.dart';
 import '../../domain/entities/fund_entity.dart';
 
-final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
-final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
+final GlobalKey<NavigatorState> _rootNavigatorKey =
+    GlobalKey<NavigatorState>(debugLabel: 'root');
+final GlobalKey<NavigatorState> _shellNavigatorKey =
+    GlobalKey<NavigatorState>(debugLabel: 'shell');
 
 /// 全屏页面淡入+上滑过渡
 Page<dynamic> _buildPage(Widget child, {bool opaque = true}) {
@@ -38,7 +40,8 @@ Page<dynamic> _buildPage(Widget child, {bool opaque = true}) {
           position: Tween<Offset>(
             begin: const Offset(0, 0.08),
             end: Offset.zero,
-          ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+          ).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
           child: child,
         ),
       );
@@ -55,10 +58,22 @@ final appRouter = GoRouter(
       navigatorKey: _shellNavigatorKey,
       builder: (context, state, child) => MainPage(child: child),
       routes: [
-        GoRoute(path: '/holdings', name: 'holdings', builder: (context, state) => const HoldingsPage()),
-        GoRoute(path: '/', name: 'home', builder: (context, state) => const WatchlistPage()),
-        GoRoute(path: '/market', name: 'market', builder: (context, state) => const MarketPage()),
-        GoRoute(path: '/news', name: 'news', builder: (context, state) => const NewsPage()),
+        GoRoute(
+            path: '/holdings',
+            name: 'holdings',
+            builder: (context, state) => const HoldingsPage()),
+        GoRoute(
+            path: '/',
+            name: 'home',
+            builder: (context, state) => const WatchlistPage()),
+        GoRoute(
+            path: '/market',
+            name: 'market',
+            builder: (context, state) => const MarketPage()),
+        GoRoute(
+            path: '/news',
+            name: 'news',
+            builder: (context, state) => const NewsPage()),
       ],
     ),
     // 全屏路由（带过渡动画）
