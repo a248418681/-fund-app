@@ -168,17 +168,22 @@ class _ScreenshotImportPageState extends State<ScreenshotImportPage> {
     try {
       final image = await _imagePicker.pickImage(
         source: source,
-        maxWidth: 4096,
-        maxHeight: 16384,
-        imageQuality: 95,
+        // 收紧尺寸上限：原 4096×16384 对长截图会解码出 ~256MB 位图，
+        // 叠加 ML Kit 模型在低内存设备(如模拟器)上易触发 OOM 闪退白屏。
+        // 2048×8192 对持仓截图的 OCR 识别已足够清晰，内存降至约 1/8。
+        maxWidth: 2048,
+        maxHeight: 8192,
+        imageQuality: 88,
       );
       if (image == null) return;
+      if (!mounted) return;
       setState(() {
         _imagePath = image.path;
         _step = _ImportStep.recognizing;
       });
       await _startOcr(image.path);
     } catch (e) {
+      if (!mounted) return;
       _showError('图片选择失败: $e');
       setState(() => _step = _ImportStep.upload);
     }
