@@ -9,6 +9,7 @@ import '../../bloc/home/home_event.dart';
 import '../../bloc/home/home_state.dart';
 import '../../bloc/search/search_bloc.dart';
 import '../../widgets/fund_card.dart';
+import '../../widgets/fund_card_skeleton.dart';
 import '../../widgets/fund_search_sheet.dart';
 
 /// 自选页面 - 只显示用户关注的基金列表
@@ -47,7 +48,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
       body: BlocBuilder<HomeBloc, HomeState>(
         builder: (context, state) {
           if (state.status == HomeStatus.loading && state.watchlist.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const FundCardSkeleton();
           }
 
           if (state.status == HomeStatus.error) {
@@ -114,11 +115,23 @@ class _WatchlistPageState extends State<WatchlistPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.cloud_off, size: 48, color: AppTheme.textMuted),
+          Container(
+            width: 96,
+            height: 96,
+            decoration: BoxDecoration(
+              color: AppTheme.textMuted.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.cloud_off_rounded,
+                size: 48, color: AppTheme.textMuted),
+          ),
           const SizedBox(height: 16),
           const Text(
             '加载失败',
-            style: TextStyle(fontSize: 16, color: AppTheme.textSecondary),
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textSecondary),
           ),
           const SizedBox(height: 8),
           Padding(
@@ -147,11 +160,23 @@ class _WatchlistPageState extends State<WatchlistPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.star_border, size: 64, color: AppTheme.textMuted),
-          const SizedBox(height: 16),
+          Container(
+            width: 96,
+            height: 96,
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.star_border_rounded,
+                size: 52, color: AppTheme.primary),
+          ),
+          const SizedBox(height: 20),
           const Text(
             '暂无自选基金',
-            style: TextStyle(fontSize: 16, color: AppTheme.textSecondary),
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textSecondary),
           ),
           const SizedBox(height: 8),
           const Text(
