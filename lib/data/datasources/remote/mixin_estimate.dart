@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:gbk_codec/gbk_codec.dart';
 import '../../../domain/entities/fund_entity.dart';
 import '../../../utils/cache_manager.dart';
 import 'remote_dio_accessor.dart';
@@ -31,7 +30,10 @@ mixin FundEstimateDataSource on RemoteDioAccessor {
         options: Options(responseType: ResponseType.bytes),
       );
       final bytes = response.data as Uint8List;
-      final text = gbk.decode(bytes);
+      // 天天基金估值接口实际返回 UTF-8（接口实测：name 字段为标准 UTF-8 字节）。
+      // 此前误用 gbk.decode 解码 UTF-8 字节导致基金名乱码，且 GBK 解 UTF-8 不抛异常，
+      // 永远进不去下方降级分支。改为 UTF-8 解码。
+      final text = utf8.decode(bytes, allowMalformed: true);
       final jsonStr = text.replaceFirst('jsonpgz(', '').replaceAll(');', '');
       final result = jsonDecode(jsonStr) as Map<String, dynamic>;
 
