@@ -6,6 +6,11 @@ class AppTheme {
   static const Color downColor = Color(0xFF18a058); // A股绿跌
   static const Color flatColor = Color(0xFF999999);
 
+  // ── 涨跌幅 pill 标签的浅色背景（与 up/down 同色系，低透明度）──
+  static const Color upBg = Color(0x1Ae4393c); // 红 10% 透明
+  static const Color downBg = Color(0x1A18a058); // 绿 10% 透明
+  static const Color flatBg = Color(0x14999999);
+
   static const Color bgPrimary = Color(0xFFF2F3F5);
   static const Color bgSecondary = Color(0xFFFFFFFF);
   static const Color bgCard = Color(0xFFFFFFFF);
@@ -100,6 +105,12 @@ class AppTheme {
   static Color changeColor(double? value) {
     if (value == null || value == 0) return flatColor;
     return value > 0 ? upColor : downColor;
+  }
+
+  /// 涨跌幅 pill 标签的浅色背景
+  static Color changeBgColor(double? value) {
+    if (value == null || value == 0) return flatBg;
+    return value > 0 ? upBg : downBg;
   }
 
   static String formatPercent(double? value, {bool withSign = true}) {

@@ -8,6 +8,7 @@ import '../../bloc/home/home_bloc.dart';
 import '../../bloc/home/home_event.dart';
 import '../../bloc/home/home_state.dart';
 import '../../bloc/search/search_bloc.dart';
+import '../../widgets/fund_card.dart';
 import '../../widgets/fund_search_sheet.dart';
 
 /// 自选页面 - 只显示用户关注的基金列表
@@ -237,107 +238,18 @@ class _WatchlistPageState extends State<WatchlistPage> {
   }
 
   Widget _buildWatchlistItem(BuildContext context, WatchlistItem item) {
-    final change = double.tryParse(item.estimateChange ?? '0') ?? 0;
-    final isUp = change > 0;
-    final isFlat = change == 0;
+    final change = double.tryParse(item.estimateChange ?? '');
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      color: AppTheme.bgSecondary,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AppTheme.borderColor, width: 0.5),
-      ),
-      child: InkWell(
-        onTap: () => context.push('/detail/${item.code}'),
-        onLongPress: () => _showItemOptions(context, item),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            item.name.isEmpty ? item.code : item.name,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: item.dataSource == 'nav'
-                                ? Colors.blue.withValues(alpha: 0.1)
-                                : Colors.orange.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            item.dataSource == 'nav' ? '净值' : '估值',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: item.dataSource == 'nav'
-                                  ? Colors.blue
-                                  : Colors.orange,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.code,
-                      style: const TextStyle(
-                          fontSize: 12, color: AppTheme.textMuted),
-                    ),
-                    if (item.estimateTime?.isNotEmpty ?? false) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        item.estimateTime ?? '',
-                        style: const TextStyle(
-                            fontSize: 11, color: AppTheme.textMuted),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    item.estimateValue ?? '--',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${isFlat ? '' : (isUp ? '+' : '')}${item.estimateChange ?? '--'}%',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: isFlat
-                          ? AppTheme.flatColor
-                          : (isUp ? AppTheme.upColor : AppTheme.downColor),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+    return FundCard(
+      name: item.name,
+      code: item.code,
+      value: item.estimateValue,
+      changePercent: change,
+      subtitle: item.estimateTime,
+      sourceLabel: item.dataSource == 'nav' ? '净值' : '估值',
+      isNavSource: item.dataSource == 'nav',
+      onTap: () => context.push('/detail/${item.code}'),
+      onLongPress: () => _showItemOptions(context, item),
     );
   }
 
