@@ -2,58 +2,12 @@ import 'dart:math' as math;
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'ocr_models.dart';
+export 'ocr_models.dart';
 // OCR 文本解析服务
 // V8: 锚点法（纯文本解析）— 旧版，保留兼容
 // V9: 横向分析法（2D block坐标解析）— 新版，推荐
 // 架构V9：X聚类分列 → Y聚类分行 → 行×列矩阵 → 直接提取字段
-
-class RecognizedHolding {
-  final String code;
-  final String name;
-  final double amount;
-  final double? shares;
-  final double? yesterdayProfit;
-  final double? holdingProfit;
-  final double? holdingProfitRate;
-  final double confidence;
-  final bool needsCodeMatch;
-
-  RecognizedHolding({
-    required this.code,
-    required this.name,
-    required this.amount,
-    this.shares,
-    this.yesterdayProfit,
-    this.holdingProfit,
-    this.holdingProfitRate,
-    this.confidence = 0.5,
-    this.needsCodeMatch = false,
-  });
-
-  RecognizedHolding copyWith({
-    String? code,
-    String? name,
-    double? amount,
-    double? shares,
-    double? yesterdayProfit,
-    double? holdingProfit,
-    double? holdingProfitRate,
-    double? confidence,
-    bool? needsCodeMatch,
-  }) {
-    return RecognizedHolding(
-      code: code ?? this.code,
-      name: name ?? this.name,
-      amount: amount ?? this.amount,
-      shares: shares ?? this.shares,
-      yesterdayProfit: yesterdayProfit ?? this.yesterdayProfit,
-      holdingProfit: holdingProfit ?? this.holdingProfit,
-      holdingProfitRate: holdingProfitRate ?? this.holdingProfitRate,
-      confidence: confidence ?? this.confidence,
-      needsCodeMatch: needsCodeMatch ?? this.needsCodeMatch,
-    );
-  }
-}
 
 /// V8-4.5 推迟的不完整名记录
 class _DeferredName {
@@ -63,8 +17,6 @@ class _DeferredName {
   final int? dataLineIdx; // 原数据行索引
   _DeferredName(this.name, this.amount, this.anchorIdx, this.dataLineIdx);
 }
-
-enum ScreenshotFormat { alipay, tiantian, generic }
 
 class OcrService {
   // ============================================================
@@ -2597,24 +2549,6 @@ class OcrService {
     }
     return name;
   }
-}
-
-/// V9用的Block数据结构
-class OcrBlock {
-  final String text;
-  final double left;
-  final double top;
-  final double right;
-  final double bottom;
-  OcrBlock({
-    required this.text,
-    required this.left,
-    required this.top,
-    required this.right,
-    required this.bottom,
-  });
-  double get centerx => left + (right - left) / 2;
-  double get centery => top + (bottom - top) / 2;
 }
 
 /// V9列定义
