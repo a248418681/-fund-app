@@ -9,8 +9,10 @@ import 'package:fund_app/utils/ocr_service.dart';
 /// 而非理想结果——已知存在的解析瑕疵（见下）也一并锁定，重构时若输出变化即报警。
 ///
 /// 已知待修瑕疵（非本次重构引入，留待后续单独修复）：
-/// - 部分基金名被误加 '%' 前缀（上一行涨跌幅的 % 粘连）
 /// - 部分折行基金名未完整拼接（如「广发中证500ETF联」缺「接(LOF)C」）
+/// - 个别名带支付宝标签噪声（如「金选指数基金...」前缀）
+///
+/// 已修复：基金名误带 '%' 前缀（上一行涨跌幅 % 粘连）——见下方专门断言。
 void main() {
   late List<RecognizedHolding> result;
 
@@ -28,6 +30,17 @@ void main() {
       final first = result.first;
       expect(first.name, '东方阿尔法瑞享混合C');
       expect(first.amount, 197.12);
+    });
+
+    test('基金名不应残留 % 前缀（% 粘连 bug 回归）', () {
+      for (final h in result) {
+        expect(h.name.startsWith('%'), isFalse,
+            reason: '基金名不应以 % 开头: "${h.name}"');
+        expect(h.name.contains('%'), isFalse,
+            reason: '基金名不应包含 %: "${h.name}"');
+      }
+      // 修复前为 "%广发远见智选混合"，修复后应为 "广发远见智选混合"
+      expect(result.any((h) => h.name == '广发远见智选混合'), isTrue);
     });
 
     test('金额被正确提取为 double', () {

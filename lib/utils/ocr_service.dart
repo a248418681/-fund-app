@@ -1648,9 +1648,11 @@ class OcrService {
   // ⚠️ 不 strip 尾部数字！因为基金名可能以字母+数字结尾
   static String _v8Clean(String name) {
     var s = name.trim();
+    s = s.replaceAll(RegExp(r'[\-+]\d{1,3}\.\d{2}'), ''); // 混入的昨日收益
+    // 去除上一行涨跌幅末尾粘连的 % 及其残留（如 "+12.59%广发..." → 数字已被上一步清掉，剩 "%广发..."）
+    s = s.replaceAll(RegExp(r'^[%\s]+'), '');
     s = s.replaceAll(RegExp(r'^[|!?;:，、\s]+'), ''); // | is OCR noise
     s = s.replaceAll(RegExp(r'[!?;:，、\s]+$'), '');
-    s = s.replaceAll(RegExp(r'[\-+]\d{1,3}\.\d{2}'), ''); // 混入的昨日收益
     // ❌ 已移除：s.replaceAll(RegExp(r'\d+$'), '') — 会错误清除基金名尾部数字
     s = s.replaceAll(',', ''); // Y坐标合并逗号噪声
     s = s.replaceAll(RegExp(r'\s+'), '');
